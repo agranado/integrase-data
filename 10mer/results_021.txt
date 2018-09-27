@@ -1,0 +1,14 @@
+position	cell	state
+021	1	rxrrxurrxu
+021	2	rurrxurrxu
+021	3	rxrrrurrxu
+021	4	rxrrrurrru
+021	5	xuuuuuurxu
+021	6	xuuxuuurxu
+021	7	xuuxruurxu
+021	8	xuuxuuurxu
+021	9	ruurrurrru
+021	10	rurrrurrru
+021	11	wrrrrurrru
+021	12	ruurrurrxu
+021	13	ruurrurrru

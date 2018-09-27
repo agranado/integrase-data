@@ -1,0 +1,13 @@
+position	cell	state
+081	1	xxxxxxxuxu
+080	2	xxxxxxxuxu
+080	3	xxxxxxxxxx
+080	4	rurrrxxxxx
+080	5	rrrrrxxxxx
+080	6	rurrrxxxxx
+080	7	xxxxxxxxxx
+080	8	rurrrurrru
+080	9	ruurruwrru
+080	10	xurrruwrru
+080	11	xxxxxxxrru
+080	12	rxxxxxxrru

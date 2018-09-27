@@ -1,0 +1,14 @@
+position	cell	state
+012	1	uxxxxurrxx
+012	2	uxxxxurrxx
+012	3	uxxxxurrxx
+012	4	xxxxxxxrru
+012	5	xruxxurxxx
+012	6	xruxxurxxx
+012	7	xrxxxurrru
+012	8	xrxxxurrru
+012	9	xrrxxurrru
+012	10	rrrxxurrru
+012	11	xuxuxuxxru
+012	12	xurxxxxxxu
+012	13	xurxxuxxxu

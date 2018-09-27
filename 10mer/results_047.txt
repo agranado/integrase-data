@@ -1,0 +1,17 @@
+position	cell	state
+047	1	xxxrruuxwu
+047	2	rurrruuxru
+047	3	rrrruxrxur
+047	4	wrrrruuxru
+047	5	xxxxxxxxxx
+047	6	xxxxxxxxxx
+047	7	xxxxxxxxxx
+047	8	xxxxxxxxxx
+047	9	xxxxxxxxxx
+047	10	xxxxxxxxxx
+047	11	ruxxrurxxu
+047	12	rurxrurxxu
+047	13	xxxxxxxxxx
+047	14	xxxxxxxxxx
+047	15	xxxxxxxxxx
+047	16	xxxxxxxxxx

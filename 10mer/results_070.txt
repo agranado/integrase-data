@@ -1,0 +1,7 @@
+position	cell	state
+070	1	xxrxrurxxu
+070	2	rxrxruruxu
+070	3	rxrxrurxru
+070	4	rxrxrurxxu
+070	5	rxrxrurxxu
+070	6	rxrxrurxxu

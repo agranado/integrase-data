@@ -1,0 +1,13 @@
+position	cell	state
+071	1	ruuruuurrr
+071	2	ruurruuruu
+071	3	uxxxxxxxxx
+071	4	uxxxxxxxxx
+071	5	xuuruuuuru
+071	6	xuuruuuxru
+071	7	xuuruuuruu
+071	8	wuuruuuruu
+071	9	uuuxxxurxu
+071	10	uuuuuuurxu
+071	11	xxxxxxxxxx
+071	12	xxxxxxxxxx

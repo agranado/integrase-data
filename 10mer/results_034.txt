@@ -1,0 +1,14 @@
+position	cell	state
+034	1	uuuruuuuuu
+034	2	xxxxxxuuuu
+034	3	uuuuuuuuuu
+034	4	uuuuuxuxuu
+034	5	xxxxxxxxxx
+034	6	uuuuuuuuru
+034	7	uuuuuuuruu
+034	8	xuurruurxu
+034	9	xuurrurrxu
+034	10	uuuruuuuuu
+034	11	xxxxxxxxxx
+034	12	uuuruuuuuu
+034	13	ruuruuurxu

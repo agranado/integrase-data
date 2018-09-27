@@ -1,0 +1,10 @@
+position	cell	state
+074	1	xuurrurxru
+074	2	xuurrurxru
+074	3	xuurrurxru
+074	4	xrxxxxrrru
+074	5	xrxxxxrxru
+074	6	xrxxxxrxru
+074	7	xrxxxxrxru
+074	8	xurrrurxxx
+074	9	uuurrurwxx

@@ -1,0 +1,5 @@
+position	cell	state
+014	1	rurruuurxu
+014	2	ruuxuuurxu
+014	3	rurxuxxrxu
+014	4	rurxxurrxu

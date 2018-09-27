@@ -1,0 +1,16 @@
+position	cell	state
+001	1	rrxuurxrxu
+001	2	rrxuurxrxu
+001	3	ruuxxuxxxx
+001	4	xxxxxxxxxx
+001	5	xxxxxxxxxx
+001	6	xxxxxxxxxx
+001	7	xxxxxxxxxx
+001	8	ruuxuxxuxx
+001	9	ruuxuuuurx
+001	10	xuuxxuxxxx
+001	11	ruuxuuuuxx
+001	12	uuuuuuuuxx
+001	13	uuuuruuuru
+001	14	uuuuuuuxxx
+001	15	uuuuuuuxxx

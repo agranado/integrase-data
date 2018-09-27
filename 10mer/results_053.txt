@@ -1,0 +1,17 @@
+position	cell	state
+053	1	ruuruuurru
+053	2	ruuruuurru
+053	3	ruuuruurxu
+053	4	ruuuruurru
+053	5	ruurruuuuu
+053	6	ruurrxuuuu
+053	7	ruurruurxu
+053	8	ruurruuruu
+053	9	ruuxrurrxu
+053	10	ruuxrurrru
+053	11	rurxrurrru
+053	12	ruuxrurrru
+053	13	ruxururrru
+053	14	ruxururrru
+053	15	xxxxxxxxxx
+053	16	ruxrrurrru

@@ -1,0 +1,10 @@
+position	cell	state
+037	1	uuuxuxxuxu
+037	2	xuuxxxxuxu
+037	3	xurxxurrxu
+037	4	xxxxxxxxxx
+037	5	uuRuuuuuxu
+037	6	wuuxxuxxxu
+037	7	ruuxxurxxu
+037	8	xxxxxxxxxx
+037	9	uuuuuuuuxu

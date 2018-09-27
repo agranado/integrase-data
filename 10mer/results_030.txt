@@ -1,0 +1,7 @@
+position	cell	state
+030	1	uuuruxuuxu
+030	2	uuuruuuuwu
+030	3	xxxxxxxxxx
+030	4	xxxxxxxxxx
+030	5	uuuxwwuuru
+030	6	uuuuuuuuru

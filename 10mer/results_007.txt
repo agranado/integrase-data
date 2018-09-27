@@ -1,0 +1,15 @@
+position	cell	state
+007	1	wrurrurrru
+007	2	xxxxxxxxxx
+007	3	xxxxxxxxxx
+007	4	xxxxxxxxxx
+007	5	xxxxxxxxxx
+007	6	xxxxxxxxxx
+007	7	ruuxrurxru
+007	8	ruuxrurxru
+007	9	xuxxruruuu
+007	10	xxxxxxxxxx
+007	11	xxxxxxxxxx
+007	12	wuuuxuuxru
+007	13	wrrxrurxru
+007	14	rrrxrurxru

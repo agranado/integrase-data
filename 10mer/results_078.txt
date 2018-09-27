@@ -1,0 +1,12 @@
+position	cell	state
+078	1	xxxxxxxxxx
+078	2	xxxxxxxxxx
+078	3	xxxxxxxxxx
+078	4	ruxrrwwrxx
+078	5	ruxrrurrxu
+078	6	ruxrruurxu
+078	7	ruxrruurxu
+078	8	uuurruurxu
+078	9	xxxxxxxxxx
+078	10	uuuruuuuxu
+078	11	ruuruuurxu

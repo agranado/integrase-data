@@ -1,0 +1,12 @@
+position	cell	state
+020	1	uuuuruuuru
+019	2	uuuuruuuru
+019	3	uuuuruuuru
+019	4	uuuxuuuuru
+019	5	uuuruuuuxx
+019	6	xxxxxxxxxx
+019	7	xxxxxxxxxx
+019	8	xxxxxxxxxx
+019	9	rurxruxxxx
+019	10	rurxruxxxx
+019	11	rurxruuxxx

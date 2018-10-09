@@ -14,7 +14,7 @@ library("phangorn")
 library(factoextra)
 
 #erase chace files
-system("rm /Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer/editRate/*")
+system("rm /Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_membow/editRate/*")
 
 source("simulation2.R")
 source("simMemoirStrDist3.R")
@@ -23,9 +23,18 @@ source("simMemoirStrDist3.R")
 
 fasta=F
 clust.method=1
-plot.all = 0
+plot.all = 1
+#directory for memoir trees
+#file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer/"
+file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_membow/"
+#read the xls with all the files info (some are not in the folder)
+all.files=read.csv(paste(file.path,"results.guide.membow.csv",sep=""))
 
-file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer/"
+#use this line to copy files :
+#for(i in 1:length(all.files$file.name)){ system(paste("cp /Users/alejandrog/Downloads/results/",all.files$file.name[i], ".txt ", file.path ,sep=""))    }
+
+#all membow trees were copied to the folder already
+
 
 #save plot for continous recording trees
 plot.path=paste(file.path,"plotsReconstruction/",sep="")
@@ -33,9 +42,8 @@ plot.path=paste(file.path,"plotsReconstruction/",sep="")
 plots.edit.rate = paste(file.path,"plotsEditRate/",sep="")
 
 
-existing.files = list.files("../GraceData/10mer/")
-#read the xls with all the files info (some are not in the folder)
-all.files=read.csv(paste(file.path,"results.guide.csv",sep=""))
+existing.files = list.files("../GraceData/10mer_membow/")
+
 #read.newick(text=toString(all.files$newick[1]))
 
     #this file information
@@ -189,6 +197,7 @@ for(file.idx in 1:length(all.files$file.name)){
           hc.manual=as.hclust(manualTree)
           # for saving ggsave("membow_31_2tree.pdf", device=CairoPDF)
       #    x11()
+      k=all.files$groups[file.idx]
           fviz_dend(hc.manual, k = k, cex = 1.2, horiz = TRUE,  k_colors = "jco",
                     rect = TRUE, rect_border = "jco", rect_fill = TRUE,xlab="time",ylab="cells")
           pdf.path = paste(plot.path,all.files$file.name[file.idx],".pdf",sep="")
@@ -301,9 +310,31 @@ histogram.plot.editrate<-function(file.path=file.path){
 
 #plot 4
 #read ALL files in the results/ folder and calculate a global rate of edits, including "w" & "R"
-stacked.plot.allTrees<-function(which.sites=1:10){
-    results.folder = "/Users/alejandrog/Downloads/results/"
-    all.results = list.files(results.folder)
+stacked.plot.allTrees<-function(which.sites=1:10,which.folder="membow"){
+
+
+
+    if(which.folder =="membow"){
+        results.folder = "/Users/alejandrog/Downloads/results/"
+        all.results = list.files(results.folder)
+    #Correction for membow mode:
+        membow.trees= as.character(85:158)
+        membow.files = array()
+        mm=1
+        for(m in 1:length(membow.trees)){
+
+          if(length(all.results[grep(membow.trees[m],all.results)])){
+               membow.files[mm] = all.results[grep(membow.trees[m],all.results)]
+               mm = mm +1
+             }
+        }
+        all.results = membow.files ####
+
+  }else if(which.folder=="memoir"){
+    results.folder = "/Users/alejandrog/Downloads/results_48/"
+    all.results = list.files(results.folder)  ####
+  }
+
 
     alphabet = c("u","r","x")
     N.sites=10
@@ -353,9 +384,9 @@ stacked.plot.allTrees<-function(which.sites=1:10){
 }
 #use the object returned above as input for these two functions:
 plot.stacked.frequencies<-function(a){
-
+  ggplot()+
   geom_bar(aes(y=value,x=siten,fill=letter),data=a[[2]],stat="identity") +
-+     scale_fill_brewer(palette="Pastel2") + labs(x="Site N",y="Frequency",title="Frequency of edits per site (48hrs)")
+     scale_fill_brewer(palette="Pastel2") + labs(x="Site N",y="Frequency",title="Frequency of edits per site (48hrs)")
 }
 #histogram
 plot.histogram.edit.rates<-function(a){
@@ -366,47 +397,57 @@ plot.histogram.edit.rates<-function(a){
 
 }
 
-# # alternative plotting method for dendrogram
-# library(dendextend)
-# library(ggdendro)
-# aa<-hclust(as.dist(t(matdist_)))
-# dend<-as.dendrogram(aa) %>%
-#   set("branches_k_color",k=6) %>% set("branches_lwd",1.2) %>%
-#   set("labels_colors") %>% set("labels_cex",c(0.9)) %>% set("leaves_pch",15) %>%
-#   set("leaves_col",c("black"))
-# plot(dend)
-#
-#
-# #plotting the real tree
-# pos21tree=read.tree(file=paste(fileName,".nwk",sep=""))
-#
-#
-#
-#
-#
-# #split the name of the tips //Grace named them as 180_xx so we split using _
-# #we need to take the barcodes fromt the posInfo
-# true.tips=strsplit(pos21tree$tip.label,"_")
-# true.tips.mat=do.call(rbind,true.tips)
-#
-# upgma.tips=strsplit(treeUPGMA$tip.label,"_")
-# upgma.tips.mat=do.call(rbind,upgma.tips)
-#
-#
-# nCells= dim(upgma.tips.mat)[1];
-# #cells that appear in the reconstructed tree
-# #we need to look for them in the true tips, edit the name and at the end, collapse and rename the tips in the tree
-# #only those cells that appear in the upgma tree will have a barcode
-# for (bc in 1:nCells){
-#   thisCell =upgma.tips.mat[bc,1]
-#   #this line basically matches the barcodes in the upgma tree to the movie IDs in the real tree.
-#   #needs to be simplified
-#   true.tips.mat[which(true.tips.mat[,2]==thisCell),2]=paste(true.tips.mat[which(true.tips.mat[,2]==thisCell),2],upgma.tips.mat[which(upgma.tips.mat[,1]==thisCell),2])
-# }
-# #update the tree with the barcodees for those cells that we are considering
-# pos21tree$tip.label =  apply(true.tips.mat,1,paste,collapse="_")
-#
-# #plot barcode statistics
-# #including all barcodes in the original data (includes xxxxx, and cells with no Movie.ID)
-# x11()
-# barplot(prop.table(table(posInfo$Summary)),las=2,ylab="Freq",main="Barcode dist (all cells)")
+
+number.effective.states <-function(norm.rates){
+#norm.states comes if you execute the inside of stackedplot.edit.rate
+
+#>norm.rates[,1]
+#      u         r         x
+#0.4823883 0.3387156 0.1788961
+  effective.states=array()
+  for (i in 1:dim(norm.rates)[2]){
+      pi = norm.rates[,i]
+      effective.states[i] = 3 ^ - sum( pi * log(pi,base=3)  )
+
+  }
+  return(effective.states)
+}
+
+boxplot.ratio.compare <-function(){
+  memoir=stacked.plot.allTrees(which.sites=1:10,which.folder = "memoir")
+  membow=stacked.plot.allTrees(which.sites=1:10,which.folder = "membow")
+
+  ratio.membow=membow[[2]]$value[membow[[2]]$letter=="r"]/membow[[2]]$value[membow[[2]]$letter=="x"]
+  ratio.memoir=memoir[[2]]$value[memoir[[2]]$letter=="r"]/memoir[[2]]$value[memoir[[2]]$letter=="x"]
+
+  d<-data.frame(
+     time = factor(c(rep("24hrs" , 7) , rep("48hrs",7))  ,levels=c("24hrs","48hrs")),
+     ratio = c(ratio.membow[c(1,3,4,5,7,8,9)],ratio.memoir[c(1,3,4,5,7,8,9)] )
+     )
+
+
+
+     ggplot(d,aes(time,ratio,fill=time)) + geom_boxplot(outlier.size=0) + scale_fill_manual(values=wes_palette(n=2, name="GrandBudapest2")) +
+     geom_jitter(aes(time,ratio), position = position_jitter(width=0.1,height=0),
+                 alpha=0.6,size=3,show_guide =F) +
+     xlab("Induction time") +
+     ylab("Ratio r/x") +
+
+     theme(axis.title.x = element_text(size=20,hjust=0.5),
+          axis.title.y = element_text(size=20,vjust=1),
+          axis.text.x = element_text(size=14,color='black'),
+          axis.text.y = element_text(size=14,color='black'),
+          legend.text=element_text(size=16),
+          legend.title=element_text(size=18),
+          legend.key.size = unit(1.5,"cm")
+
+      )
+
+
+
+   }
+
+
+
+#meeting October 3
+#test the ratio of x /r for 24hrs and 48hrs

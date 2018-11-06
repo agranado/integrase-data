@@ -1,0 +1,10 @@
+position	cell	state
+050	1	ruxuxrrrxu
+050	2	ruxrxurrxu
+050	3	rurrxurrru
+050	4	rurrxurrru
+050	5	rxrrxurrru
+050	6	rrrrxurrru
+050	7	ruxrxurrxu
+050	8	ruxrxurrxu
+050	9	ruxuxrrrxu

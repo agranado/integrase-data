@@ -6,7 +6,6 @@ position	cell	state
 013	5	xxxxxxxxxx
 013	6	uuuruuuxuu
 013	7	uuuruuuxuu
-013	8	wuuuwuuuuu
 013	9	xxxxxxxxxx
 013	10	xxxxxxxxxx
 013	11	xxxxxxxxxx

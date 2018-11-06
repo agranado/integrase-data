@@ -1,0 +1,13 @@
+position	cell	state
+140	1	rrrrruxrru
+140	2	rrrrruwrru
+140	3	rrrrruxrru
+140	4	rrrrruxrru
+140	5	uuuuxuuuru
+140	6	uuuuxuurru
+140	7	uuuuruuruu
+140	8	uuuuxuuxxx
+140	9	uuurxuuuxu
+140	10	uuuruuuuxu
+140	11	ruuruuurxu
+140	12	ruuruuurxu

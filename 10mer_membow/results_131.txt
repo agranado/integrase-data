@@ -1,0 +1,17 @@
+position	cell	state
+131	1	uuuuuuuuuu
+131	2	uuuuuuuuxu
+131	3	uuuuuuuuxu
+131	4	uuuuuuuuxu
+131	5	uuuuuuuuxu
+131	6	uuuuuuuuxu
+131	7	uuuuuuuuxu
+131	8	uuuuuuuuxu
+131	9	uuuuuuruuu
+131	10	uuuuuuruuu
+131	11	uuuuuuruxu
+131	12	uuuuuuruuu
+130	13	uuuuuurrxu
+130	14	uuuuuurrxu
+131	15	uuuuuurrxu
+131	16	uuuuuurrxu

@@ -1,0 +1,10 @@
+position	cell	state
+049	1	uuuuuuuuuu
+049	2	uuuuuuuuuu
+049	3	uuuuuuuuuu
+049	4	ruuuruuxrr
+049	5	rurwuuuxrr
+049	6	uuuxxxxxru
+049	7	ruxxruxxru
+049	8	uuxxruuuux
+049	9	uuuruurxuu

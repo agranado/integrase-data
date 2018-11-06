@@ -1,0 +1,9 @@
+position	cell	state
+044	1	ruurruxrru
+044	2	xxxxxxxxxx
+044	3	uuuxxuurxu
+044	4	ruuuxuuxxu
+044	5	uuuuxuurxu
+044	6	uuuuruurru
+044	7	xuxxrxurxu
+044	8	wuuxruxrru

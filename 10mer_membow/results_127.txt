@@ -1,0 +1,12 @@
+position	cell	state
+127	1	xxxxxxxxxx
+127	2	xxxxxxxxxx
+127	3	xxxxxxxxxx
+127	4	xxxxxxxxxx
+127	5	rxrruxxxxx
+127	6	rrxrrurxru
+127	8	uurxxuurxu
+127	9	uurxxuurru
+127	10	xxxxxxxxxx
+127	11	xxxxxxxxxx
+127	12	xxxxxxxxxx

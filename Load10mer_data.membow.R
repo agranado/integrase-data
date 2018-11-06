@@ -12,6 +12,7 @@ rm(list=ls())
 library("ape")
 library("phangorn")
 library(factoextra)
+library("phytools")
 
 #erase chace files
 system("rm /Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_membow/editRate/*")
@@ -190,7 +191,22 @@ for(file.idx in 1:length(all.files$file.name)){
           # hclust.tree=as.phylo(hclust(as.dist(t(matdist_))))
           # hclust.tree$tip.label = treeUPGMA$tip.label
           # manualTree=hclust.tree
-          manualTree$tip.label<- paste(names(barcodes),barcodes,sep="_")
+          #ADD a 0 if the number of the cell has only 1 digit
+          #Substitute the u,r,x for 0,1,2
+          tip.names = paste(names(barcodes),barcodes,sep="_")
+          for(tt in 1:length(tip.names)){
+            this.cell.n = str_extract(tip.names[tt],"\\d+")
+            if(nchar(this.cell.n)==1){
+              tip.names[tt]=paste("0",tip.names[tt],sep="")
+            }
+
+          }
+
+          tip.names=gsub("r","2",tip.names)
+          tip.names=gsub("x","1",tip.names)
+          tip.names=gsub("u","0",tip.names)
+
+          manualTree$tip.label<- tip.names
           #sometimes there are edges with negative values (-6e-18) which should not happen
           manualTree$edge.length[manualTree$edge.length<0]=0
           #hc.manual=as.hclust(reverseLabels(manualTree))
@@ -199,7 +215,8 @@ for(file.idx in 1:length(all.files$file.name)){
       #    x11()
       k=all.files$groups[file.idx]
           fviz_dend(hc.manual, k = k, cex = 1.2, horiz = TRUE,  k_colors = "jco",
-                    rect = TRUE, rect_border = "jco", rect_fill = TRUE,xlab="time",ylab="cells")
+                    rect = F, rect_border = "jco", rect_fill = TRUE,xlab="cells",ylab="time",
+                  labels_track_height=2)
           pdf.path = paste(plot.path,all.files$file.name[file.idx],".pdf",sep="")
           scaling=0.7
           ggsave(pdf.path, device=cairo_pdf,width = 9.32*scaling,height = 10.4*scaling,units="in")
@@ -231,7 +248,7 @@ for(file.idx in 1:length(all.files$file.name)){
                   rect = TRUE, rect_border = "jco", rect_fill = TRUE,xlab="time",ylab="cells")
       }
 
-    }
+    } #end IF FILE EXISTS
 
 
 

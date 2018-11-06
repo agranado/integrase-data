@@ -1,0 +1,7 @@
+position	cell	state
+060	1	xxxxxxxxxx
+060	2	xuurruurru
+060	3	xxxxxxxxxx
+060	4	xuurrurrru
+060	5	uxxruruxur
+060	6	uxxruruxur

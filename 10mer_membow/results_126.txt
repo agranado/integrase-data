@@ -1,0 +1,10 @@
+position	cell	state
+126	1	xxxxxuxrru
+126	2	xxxxxuurru
+126	3	rxxxxuuruu
+126	4	rxxxxuuruu
+126	5	rxxxxuuruu
+126	6	rxxxxuuruu
+126	7	ruurrurrxu
+126	8	xxxxxxxxxx
+126	9	xuuururrxu

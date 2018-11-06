@@ -18,12 +18,12 @@ source("simMemoirStrDist3.R")
 #source("../simulation/simulation2.R")
 #source("../simulation/simMemoirStrDist.R")
 
-#choose the tree from the list:
-file.idx=8
-
+#choose the tree from the lit:
+file.idx=5
+lengthBarcode = 6
 
 files = c("pos31_2","pos37","pos1_cont","pos4_cont","pos5_cont","pos6_cont","pos8_cont","pos33")
-ks= c(8,5,4,3,3,3,5,6)
+ks= c(6,5,4,3,3,3,5,6)
 estimMu.s=c(0.3,0.5,0.4,0.4,0.4,0.4,0.4,0.5)
 alphas=c(2/3,2/3,2/3,2/3,2/3,2/3,2/3,2/3)
 generations=c(2,2,4,4,3,3,4,2)
@@ -41,7 +41,7 @@ estimG =generations[file.idx]
 plot.path=paste(file.path,"plots/contRecording",sep="")
 
 
-#read csv as dataframe
+#read csv as dataframe:
  posInfo=read.csv(paste(fileName,".csv",sep=""))
 
  #features are in

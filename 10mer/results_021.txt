@@ -11,4 +11,3 @@ position	cell	state
 021	10	rurrrurrru
 021	11	wrrrrurrru
 021	12	ruurrurrxu
-021	13	ruurrurrru

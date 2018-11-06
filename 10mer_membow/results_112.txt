@@ -1,0 +1,8 @@
+position	cell	state
+112	1	uuuuuuuuru
+112	2	uuuuuuuuru
+112	3	uuuuuuuuru
+112	4	uuuuuuuuru
+112	5	uuuuuuuuww
+112	6	uuuuuuuuuu
+112	7	uuuuuuuuuu

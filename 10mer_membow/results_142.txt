@@ -1,0 +1,27 @@
+position	cell	state
+142	1	uuuuuuuxuw
+142	2	xxxxxxxxxx
+142	3	uuxxxuuuux
+142	4	uuuuuuuuuu
+142	5	uuuuuuuuuu
+142	6	uuuuuuuuww
+142	7	uuuuuuuuuu
+142	8	uuruuuuuuu
+142	9	uuuuuuuuuu
+142	10	uuuuuuuuuu
+142	11	uuuuuuuuuu
+142	12	xxxxxxxxxx
+142	13	uuuuuuuuuu
+142	14	uuuuuuuuuu
+142	15	xxxxxxxxxx
+142	16	uuuuuuuuuu
+142	17	uuuuuuuuuu
+142	18	uuuuuuuuuu
+142	19	uuuuuuuuuu
+142	20	uuuuuuuuuu
+142	21	uuuruuuuuu
+142	22	uuuruuuuuw
+142	23	uuuruuuuuu
+142	24	uuuruuuuuu
+142	25	uuuruuuuuu
+

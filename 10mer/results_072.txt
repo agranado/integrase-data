@@ -1,0 +1,11 @@
+position	cell	state
+072	1	uuuxuuurru
+072	2	wuuxuuurru
+072	3	uuuruuuuru
+072	4	uuuruuuuru
+072	5	uuuruuuuuu
+072	6	uuurwuuuuu
+072	7	uuuuuuuruu
+072	8	uuxuuuurxu
+072	9	ruuuuuuuru
+072	10	ruuuuuuuru

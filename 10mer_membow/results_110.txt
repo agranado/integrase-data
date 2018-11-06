@@ -1,0 +1,11 @@
+position	cell	state
+110	1	xxxxxxxxxx
+110	2	xxxxxxxxxx
+110	3	xxxxxxxxxx
+110	4	xxxxxxxxxx
+110	5	ruuxwxxuuu
+110	6	ruuxuxxuuu
+110	7	ruuxuxxuru
+110	8	ruuxuxxuru
+110	9	uxxxuxxrxu
+110	10	uxxxuxxrxu

@@ -1,0 +1,12 @@
+position	cell	state
+093	1	rruxrurrxu
+093	2	rruxrurrxu
+093	3	rruxrurrxu
+093	4	rruxrurrxu
+093	5	xxxxxxxxxx
+093	6	xuuuxuurrx
+093	7	xuuuxuurru
+093	8	uxxxxxxxxx
+093	9	uxxxxxxxxx
+093	10	uxxxxxxxxx
+093	11	uxxxxxxxxx

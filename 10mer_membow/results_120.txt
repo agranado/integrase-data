@@ -1,0 +1,7 @@
+position	cell	state
+120	1	rurxrurrru
+120	2	xurxrurrru
+120	3	xurrruxrru
+120	4	xuuxruxrru
+120	6	wuurruurru
+120	7	xuurruurru

@@ -1,0 +1,4 @@
+position	cell	state
+087	1	ruuuxxxxxx
+087	2	rruuxxxxxx
+087	3	rurruuurxu

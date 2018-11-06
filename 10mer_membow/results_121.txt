@@ -1,0 +1,6 @@
+position	cell	state
+121	1	xxxxxxxxxx
+121	2	uuuuuuuuuu
+121	3	uuuuuuuuuu
+121	4	uuuuuuuuru
+121	5	xxxxxxxxxx

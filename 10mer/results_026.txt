@@ -1,0 +1,7 @@
+position	cell	state
+026	1	ruuxruurru
+026	2	wurxruuxru
+026	3	xxxxxxxxxx
+026	4	wurrruurxx
+026	5	xxxxxxxxxx
+026	6	xxxxxxxxxx

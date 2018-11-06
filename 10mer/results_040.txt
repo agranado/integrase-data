@@ -18,4 +18,3 @@ position	cell	state
 040	17	xxxxxxxxxu
 040	18	rxxrxuuxxu
 040	19	ruurxuuxxu
-040	20	rurrxurrru

@@ -1,0 +1,5 @@
+position	cell	state
+119	1	ruxrrurrxu
+119	2	ruxrrurrxu
+119	3	ruxrrurrxu
+119	4	ruxrrurrxu

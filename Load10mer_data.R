@@ -12,10 +12,13 @@ rm(list=ls())
 library("ape")
 library("phangorn")
 library(factoextra)
+library(stringr)
+library(phytools)
 
 #erase chace files
 system("rm /Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer/editRate/*")
 
+source("../GraceData/RF.experiment.R")
 source("simulation2.R")
 source("simMemoirStrDist3.R")
 
@@ -35,13 +38,13 @@ plots.edit.rate = paste(file.path,"plotsEditRate/",sep="")
 
 existing.files = list.files("../GraceData/10mer/")
 #read the xls with all the files info (some are not in the folder)
-all.files=read.csv(paste(file.path,"results.guide.csv",sep=""))
+all.files=read.csv(paste(file.path,"results.guide.yellow.csv",sep=""))
 #read.newick(text=toString(all.files$newick[1]))
 
     #this file information
 ##for(file.idx in c(10)){
 for(file.idx in 1:length(all.files$file.name)){
-#for(file.idx in 21){
+#for(file.idx in 10){
     files.extension = all.files$file.extension[file.idx]
     file.name=all.files$file.name[file.idx]
     stacked.rate.file=paste(file.path,"editRate/",toString(all.files$file.name[file.idx]),"_all_rates.txt",sep="",collapse="")
@@ -84,14 +87,17 @@ for(file.idx in 1:length(all.files$file.name)){
       nCells_=length(as.character(barcodes))
       avgEditRate = array(); avgEditRate_r=array(); avgEditRate_x=array()
       for(i in 1:nCells_){
-         avgEditRate[i] = sum(strsplit(toString(barcodes[i]),"")[[1]]=="u")/lengthBarcode
+         avgEditRate[i] = sum(strsplit(toString(barcodes[i]),"")[[1]]=="u")/lengthBarcode #fraction of "u" in the array
          avgEditRate_r[i] = sum(strsplit(toString(barcodes[i]),"")[[1]]=="r")/lengthBarcode
          avgEditRate_x[i] = sum(strsplit(toString(barcodes[i]),"")[[1]]=="x")/lengthBarcode
        }
-       pos.vals=!(avgEditRate_x==0 & avgEditRate_r==0)
+       pos.vals=!(avgEditRate_x==0 & avgEditRate_r==0) #which cells to take into accoutn
+
        estimMu = 1-mean(avgEditRate[pos.vals])^(1/estimG)
        estimAlpha = 1-mean(avgEditRate_x[pos.vals] / (avgEditRate_r[pos.vals] + avgEditRate_x[pos.vals]))
-
+       #trying a small hack, 1-alpha
+      estimAlpha = 1-estimAlpha
+      #estimG = estimG * 10
        # # # paper plot
        #Lets calculate the edit rate per site (in theory should be even)
        tt=apply(as.matrix(barcodes),2,strsplit,"")
@@ -118,6 +124,11 @@ for(file.idx in 1:length(all.files$file.name)){
        write.table(mean(rate.per.site),paste(file.path,"editRate/distribution_rates_perTree.txt",sep="",collapse="") ,
         append=T,row.names = F,col.names = F)
 
+
+      write.table(estimMu,paste(file.path,"editRate/distribution_Mu_perTree.txt",sep="",collapse="") ,
+        append=T,row.names = F,col.names = F)
+
+
       #FILE 4
       #Write all barcodes for all cells for all trees together in a single file
       all.bc.file = paste(file.path,"editRate/","allBarcodes.txt",sep="")
@@ -137,6 +148,11 @@ for(file.idx in 1:length(all.files$file.name)){
           fastaBarcodes<-fastaBarcodes[rand.barcode.order]
           barcodes<-barcodes[rand.barcode.order]
           write(fastaBarcodes,file=fasIN)
+
+          #cmds[1]="sed -i.bak 's/R/c/g'"
+          #cmds[2]="sed -i.bak 's/x/t/g'"
+          #cmds[3]="sed -i.bak 's/u/g/g'"
+          #cmds[4]="sed -i.bak 's/r/a/g'"
 
           convertMemoirToDNA(fasIN)
           #sequences have a "c" at the end
@@ -169,46 +185,135 @@ for(file.idx in 1:length(all.files$file.name)){
         }
 
 
-        if(clust.method==1 && plot.all == 1){
+        if(clust.method==1){
+
+
+
+          ground.truth = all.files$newick[file.idx]
+          true.tree=read.newick(text=toString(ground.truth))
+
+
           #manualTree = upgma(as.dist(t(manualDist(as.character(barcodes),estimMu,estimAlpha,estimG ))));
           #TEST manualTree using the ML function (should work slightly better)
           matdist_=manualDistML(as.character(barcodes),estimMu,estimAlpha,estimG )
-          manualTree = upgma(as.dist(t(matdist_)));
+          #colnames(matdist_)<-barcodes
+          #row.names(matdist_)<-barcodes
 
-          # #manual tree using the hclust methods from R heatmap
-          # h=heatmap.2(matdist_+t(matdist_),trace="none",dendrogram = 'column')
-          #
-          # #alternative w/o plotting the actual heatmap, only hclust method
-          # hclust.tree=as.phylo(hclust(as.dist(t(matdist_))))
-          # hclust.tree$tip.label = treeUPGMA$tip.label
-          # manualTree=hclust.tree
-          manualTree$tip.label<- paste(names(barcodes),barcodes,sep="_")
+
+          #alternative w/o plotting the actual heatmap, only hclust method
+          hclust.tree=as.phylo(hclust(as.dist(t(matdist_))))
+
+          manualTree = hclust.tree
+
+
+
+
+
+          tip.names = paste(names(barcodes),barcodes,sep="_")
+          for(tt in 1:length(tip.names)){
+            this.cell.n = str_extract(tip.names[tt],"\\d+")
+            if(nchar(this.cell.n)==1){
+              tip.names[tt]=paste("0",tip.names[tt],sep="")
+            }
+          }
+
+          tip.names=gsub("r","2",tip.names)
+          tip.names=gsub("x","1",tip.names)
+          tip.names=gsub("u","0",tip.names)
+
+          manualTree$tip.label<- tip.names
           #sometimes there are edges with negative values (-6e-18) which should not happen
           manualTree$edge.length[manualTree$edge.length<0]=0
           #hc.manual=as.hclust(reverseLabels(manualTree))
           hc.manual=as.hclust(manualTree)
           # for saving ggsave("membow_31_2tree.pdf", device=CairoPDF)
-      #    x11()
-          fviz_dend(hc.manual, k = k, cex = 1.2, horiz = TRUE,  k_colors = "jco",
-                    rect = TRUE, rect_border = "jco", rect_fill = TRUE,xlab="time",ylab="cells")
-          pdf.path = paste(plot.path,all.files$file.name[file.idx],".pdf",sep="")
-          scaling=0.7
-          ggsave(pdf.path, device=cairo_pdf,width = 9.32*scaling,height = 10.4*scaling,units="in")
+          #TEST FOR DIANA method # # # # # # 
+          matdist_1 = matdist_
+          colnames(matdist_1)<-tip.names;row.names(matdist_1)<-tip.names
 
-          ground.truth = all.files$newick[file.idx]
-          true.tree=read.newick(text=toString(ground.truth))
-          pdf.path.truth = paste(plot.path,all.files$file.name[file.idx],"_groundTruth.pdf",sep="")
-          pdf(pdf.path.truth)
-            plot.phylo(true.tree)
-          dev.off()
+          hc.manual_ = as.hclust( diana(as.dist(t(matdist_1))))
 
-          #join the pdfs
-          system(paste("\'/System/Library/Automator/Combine PDF Pages.action/Contents/Resources/join.py\' -o ",plot.path,file.name,"_merged.pdf ",
-                pdf.path," ",pdf.path.truth, sep=""))
+          ### EDIT FOR RF DISTRIBUTION 17th October 2018
+          #this function calculates the RF distance between the reconstruction and the groun truth.
+          #this should be comparable to previous measures of RF for the simulations.
+          #RF =0 means random clustering
+          #RF =1 means perfect reconstruction
+          RF.list = normalized.RF.experiment(true.tree, manualTree , barcodes,posInfo)
+          this.score = RF.list[[1]]
+          alive.tree = RF.list[[2]]
+          rand.dist = RF.list[[3]]
 
-          #remove individual files:
-          system(paste("rm ",pdf.path,sep=""))
-          system(paste("rm ",pdf.path.truth,sep=""))
+          #PLOTTING
+          # # # # # # # #
+           # # # # # # # #
+          if(plot.all==1){
+              if(nCells_<4){
+                k=1
+              }
+
+
+              fviz_dend(hc.manual, k = k, cex = 1.2, horiz = TRUE,  k_colors = "jco",
+                                  rect = F, rect_border = "jco", rect_fill = TRUE,xlab="cells",ylab="time",
+                                labels_track_height=2)
+
+              pdf.path = paste(plot.path,all.files$file.name[file.idx],".pdf",sep="")
+              scaling=0.7
+              ggsave(pdf.path, device=cairo_pdf,width = 9.32*scaling,height = 10.4*scaling,units="in")
+
+              pdf.path.truth = paste(plot.path,all.files$file.name[file.idx],"_groundTruth.pdf",sep="")
+              pdf(pdf.path.truth)
+                plot.phylo(true.tree)
+              dev.off()
+
+
+
+              #PDF WRITE for simplified ground.truth
+              pdf.path.truth.simple = paste(plot.path,all.files$file.name[file.idx],"_groundTruth_simple.pdf",sep="")
+              pdf(pdf.path.truth.simple)
+                plot.phylo(alive.tree)
+              dev.off()
+
+
+              #join the pdfs
+              system(paste("\'/System/Library/Automator/Combine PDF Pages.action/Contents/Resources/join.py\' -o ",plot.path,file.name,"_merged.pdf ",
+                              pdf.path," ",pdf.path.truth.simple," ",pdf.path.truth, sep=""))
+
+                        #remove individual files:
+              system(paste("rm ",pdf.path,sep=""))
+              system(paste("rm ",pdf.path.truth,sep=""))
+              system(paste("rm ",pdf.path.truth.simple,sep=""))
+          } #END PLOTTING
+            # # # # # #
+             # # # # # #
+
+          #we can make a vector of distances :
+          colnames(matdist_)<-tip.names;row.names(matdist_)<-tip.names
+          d1=this.score
+          d2=RF.dist(as.phylo(as.hclust( diana(matdist_+t(matdist_) ) )),alive.tree)
+          if(rand.dist>0){d2 = 1-d2/rand.dist}
+          #distance 2
+
+          d3=RF.dist(as.phylo(upgma(matdist_1+t(matdist_1))), alive.tree  )
+          if(rand.dist>0){d3 = 1-d3/rand.dist}
+
+
+
+          b=as.matrix(do.call(cbind,strsplit(substr(tip.names,4,14),"")))
+          d4=sum(b=="0")/prod(dim(b)) #fraction of unedited sites (to filter bad colonies)
+          #this.score is a colum vector of many clustering methods, based on the same distance matrix
+          this.score = t( c (d1,d2,d3,d4))
+          #just print the first score
+
+          this.score = t(c(toString(all.files$file.name[file.idx]),d1,length(alive.tree$tip.label),d4))
+          #WRITE FILE RF distance
+            write.table(this.score,paste(file.path,"editRate/distribution_RF_perTree.txt",sep="",collapse="") ,
+                      append=T,row.names = F,col.names = F)
+
+          #WRITE FILE NEWICK reconstructed
+
+          newick.out=paste(fileName,".nwk",sep="")
+          write.tree(manualTree,file=newick.out)
+
         }
     # # # # # # # # # # #
      # # # # # # # # # # #
@@ -226,7 +331,28 @@ for(file.idx in 1:length(all.files$file.name)){
 
 
 
-}
+}# # # # # # # #
+# # # # # # # # #
+ # # # # # # # # 
+#END MAIN FOR
+
+
+
+
+#Useful commands
+#DATA FRAME WITH DISTANCE
+
+#   data.frame(RF=rate.dist,name=all.files$file.name[as.logical(all.files$FISH)])
+
+
+
+# # # # # # # #
+ # # # # # # #
+#Additional plot schemes for paper FIGURES
+# "npg" is the palette inspired by nature-like papers
+x11();fviz_dend(hc.manual, k = k, cex = 1.4, horiz = TRUE,  k_colors = "npg",
+          rect = T, rect_border = "npg", rect_fill = T,xlab="cells",ylab="time",low_rect=100)
+
 
 #FIGURES
 #plot edit rates per site as a barplot with error bars WORKS
@@ -245,6 +371,24 @@ barplot.edit.rate<-function(rate.file="/Users/alejandrog/MEGA/Caltech/trees/Grac
 
 }
 
+compare.ecdf<-function(file.path){
+  rate.dist.file = paste(file.path,"editRate/distribution_RF_perTree.txt",sep="",
+  collapse="");
+  rate.dist = read.table(rate.dist.file)
+  n = dim(rate.dist)[1]
+
+  for(i in 1:length(names(rate.dist))){
+    a = sort(rate.dist[,i])
+    if(i ==1){
+      plot(a,(1:n)/n,type = "l",col = "red",ylab="Cumulative fraction",xlab="Norm RF score",
+    main = "ECDF all MEMOIR colonies")
+    }else {
+      lines(a,(1:n)/n)
+
+    }
+  }
+
+}
 
 #paper plot
 #plot the frequency of each edit per site as a stacked barplot
@@ -298,6 +442,15 @@ histogram.plot.editrate<-function(file.path=file.path){
   rate.dist.file = paste(file.path,"editRate/distribution_rates_perTree.txt",sep="",collapse="")
   rate.dist = read.table(rate.dist.file)
 }
+
+histogram.plot.RF<-function(file.path=file.path,posInfo){
+
+  rate.dist.file = paste(file.path,"editRate/distribution_RF_perTree.txt",sep="",collapse="")
+  rate.dist = read.table(rate.dist.file)
+  tree.analysis = data.frame(RF=rate.dist$V1,name=all.files$file.name[as.logical(all.files$FISH)])
+  return(tree.analysis)
+}
+
 
 #plot 4
 #read ALL files in the results/ folder and calculate a global rate of edits, including "w" & "R"

@@ -1,0 +1,11 @@
+position	cell	state
+046	1	xxxxrurrru
+046	2	xxxxrurrru
+046	3	xxrrxurxxu
+046	4	xuurruuxxu
+046	5	xxxxxxxxxx
+046	6	xxxxxxxxxx
+046	7	xxxxxxxxxx
+046	8	xxxxxxxxxx
+046	9	ruurruurru
+046	10	rurrruxrru

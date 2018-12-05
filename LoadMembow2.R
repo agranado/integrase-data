@@ -6,7 +6,7 @@
 
 #generate lineage based on the manual distance measure
 # manualTree = upgma(as.dist(t(manualDist(as.character(barcodes),0.3,2/3,2 ))));manualTree$tip.label<- paste(names(barcodes),barcodes,sep="_")
-
+getwd()
 
 rm(list=ls())
 library("ape")

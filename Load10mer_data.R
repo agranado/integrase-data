@@ -44,7 +44,7 @@ all.files=read.csv(paste(file.path,"results.guide.yellow.csv",sep=""))
     #this file information
 ##for(file.idx in c(10)){
 for(file.idx in 1:length(all.files$file.name)){
-#for(file.idx in 10){
+    #for(file.idx in 10){
     files.extension = all.files$file.extension[file.idx]
     file.name=all.files$file.name[file.idx]
     stacked.rate.file=paste(file.path,"editRate/",toString(all.files$file.name[file.idx]),"_all_rates.txt",sep="",collapse="")

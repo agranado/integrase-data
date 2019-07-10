@@ -240,6 +240,7 @@ for(file.idx in 1:length(all.files$file.name)){
           #RF =1 means perfect reconstruction
           RF.list = normalized.RF.experiment(true.tree, manualTree , barcodes,posInfo)
           this.score = RF.list[[1]]
+          print(this.score)
           alive.tree = RF.list[[2]]
           rand.dist = RF.list[[3]]
 

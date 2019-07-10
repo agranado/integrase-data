@@ -1,4 +1,6 @@
 #clustering analysis of membow trees
+file.path = "10mer_membow/"
+library(ggplot2)
 
 clust.data = read.table(paste(file.path,"clusters.membow.data.txt",sep=""),header=T,sep="\t")
 

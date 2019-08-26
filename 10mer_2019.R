@@ -17,6 +17,8 @@ library(phytools)
 library(data.table)
 library(cluster)
 library(dplyr)
+library(adephylo)
+library(phylobase)
 
 
 
@@ -715,6 +717,9 @@ clonal.score<-function(id,control=F){
         if(length(clones_here)>0){
           #for this barcodes, where are all the cells
           clone_score = c()
+          best_Sb = c()
+          best_Sa = c()
+          clone_totaA = c()
           #for this BARCode
           for(i in 1:length(clones_here)){
               #i = 1
@@ -737,6 +742,8 @@ clonal.score<-function(id,control=F){
               tree_partitions = subtrees(clone_tree)
               # Save score for all partitions
               partition_score = c()
+              S_a_array = c()
+              S_b_array = c()
               # Iterate over all partitions:
               Tot_A = clone_size # How many A's in the whole MRCA
               for(t in 1:length(tree_partitions)){
@@ -747,14 +754,25 @@ clonal.score<-function(id,control=F){
                    # S_a  /  Tot_A   +  cells_considered - S_a
                    # S_a  / Tot_A + S_b
                    # length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
+                   S_b = length(clone_subtree$tip.label) - S_a
+
+                   # Save these numbers for false positive and false negative calculation
+                   S_a_array[t] = S_a
+                   S_b_array[t] = S_b
+
+
               }
 
               clone_score[i] = max(partition_score)
-
+              # we can save the index of the best score and then get S_a, Tota_A, Sb
+              best_score_index =which.max(partition_score)
+              best_Sb[i] =  S_b_array[best_score_index]
+              best_Sa[i] =  S_a_array[best_score_index]
+              clone_totaA[i] = Tot_A
               #masked_barcodes = paste(as.character(1:length(masked_barcodes)),masked_barcodes,sep="" )
               #clone_score[i] = length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
             }
-          return(clone_score)
+          return(list(clone_totaA,clone_score, best_Sa, best_Sb))
         }else{
           return(NULL)
         }

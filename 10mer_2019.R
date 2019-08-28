@@ -810,7 +810,7 @@ get.all.clones<-function(file.idx){
     }
 }
 
-# New method for clonal accuracy
+#  New method for clonal accuracy
 # Aug 2019
 # uses MRCA to calculate sub-trees and scores
 clonal.score<-function(id,control=F,plot.all = F,pdf_file = "clonalPlot"){

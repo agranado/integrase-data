@@ -787,7 +787,7 @@ old.forloop <-function(){
 # The returned object is a table (array with names)
 get.all.clones<-function(file.idx){
 
-  res<-inspect.tree(file.idx,plot.all = F,return.tree = T,global = F,globalG = 4,clust.method = "diana")
+  res<-inspect.tree(file.idx,plot.all = F,return.tree = T,global = T,globalG = 4,clust.method = "diana")
 
   if(length(res)>0){
 
@@ -810,18 +810,19 @@ get.all.clones<-function(file.idx){
     }
 }
 
-# New method for clonal accuracy
+#  New method for clonal accuracy
 # Aug 2019
 # uses MRCA to calculate sub-trees and scores
-clonal.score<-function(id,control=F){
+clonal.score<-function(id,control=F,plot.all = F,pdf_file = "clonalPlot"){
 
 
-      r = inspect.tree(id,plot.all = F, return.tree = T)
+      r = inspect.tree(id,plot.all = F, return.tree = T,clust.method = "diana")
       # if ground truth is not good enough, then returns NULL so check for that
       if(length(r)>0){
         # tree is good quality then continue
         # inspect.tree returns a list where element 8 is the ground_truth tree
         ground_truth = r[[8]]
+        reconstruction = r[[9]]
 
         # to calculate the random guess. negative CONTROL
         if(control)
@@ -895,6 +896,27 @@ clonal.score<-function(id,control=F){
               #masked_barcodes = paste(as.character(1:length(masked_barcodes)),masked_barcodes,sep="" )
               #clone_score[i] = length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
             }
+
+          output_table = data.frame(totA  = clone_totaA, score =clone_score, Sa = best_Sa, Sb = best_Sb)
+          row.names(output_table)<- names(clones_here)
+
+          #Before returning the object, we will print the groung truth , reconstruction and output table to PDF
+          if(plot.all ==T){
+                pdf( paste(pdf_file, r[[1]],"_treePlot_RF_",toString(round(r[[4]],3)) ," _.pdf" ,sep = ""), height = 10, width = 17)
+
+                  grid.arrange(ggdendrogram( as.hclust(force.ultrametric(r[[8]]) ), rotate = T )  ,
+                      ggdendrogram(as.hclust(r[[9]]),rotate=T),tableGrob(output_table),
+                            ncol = 3)
+
+
+                  list_dend = dendlist( as.dendrogram(force.ultrametric(r[[8]])) , as.dendrogram(as.hclust(r[[9]])))
+                  list_dend %>% untangle(method = "step1side") %>% # Find the best alignment layout
+                  tanglegram(short=T,type="r",dLeaf_right = 0,dLeaf_left = -10,margin_inner = 7,highlight_branches_lwd = FALSE)                       # Draw the two dendrograms
+
+                dev.off()
+
+          }
+
           return(list(clone_totaA,clone_score, best_Sa, best_Sb))
         }else{
           return(NULL)
@@ -933,101 +955,101 @@ make.clonal.plot<-function(){
 
  # # # # # #
 # # # # # #
-# OLD Methods for clonal accuracy
-
-# clonal tracing accuracy  Jul 8th 2019
-inspect.clusters<-function(file.idx,global = T,globalG = 4,clust.method = "complete",k= 4){
-    res= inspect.tree(file.idx,plot.all=F,return.tree= T,global,globalG,clust.method)
-
-
-    hc = res[[8]]
-    hc_reconstructed = res[[9]]
-    x11()
-    p=fviz_dend(as.hclust(force.ultrametric(hc)), k = k, # Cut in four groups
-              cex = 0.9, # label size
-              k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
-              color_labels_by_k = TRUE, # color labels by groups
-              rect = TRUE, # Add rectangle around groups
-              rect_border = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
-              rect_fill = TRUE,
-              main="reconstructed lineage (membow)",
-              xlab="cells",ylab="time")
-
-    p1=fviz_dend(as.hclust(force.ultrametric(hc_reconstructed)), k = k, # Cut in four groups
-              cex = 0.9, # label size
-              k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
-              color_labels_by_k = TRUE, # color labels by groups
-              rect = TRUE, # Add rectangle around groups
-              rect_border = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
-              rect_fill = TRUE,
-              main="reconstructed lineage (membow)",
-              xlab="cells",ylab="time")
-
-    grid.arrange(p,p1,ncol = 2)
-}
-#   data.frame(RF=rate.dist,name=all.files$file.name[as.logical(all.files$FISH)])
-
-clone_accuracy<-function(file.idx,k_ = 4,control =F){
-
-    res<-inspect.tree(file.idx,plot.all = F,return.tree = T,global = F,globalG = 4,clust.method = "diana")
-
-
-
-    ground = res[[8]]
-
-    k = floor(length(ground$tip.label)/k_)
-    #destroy lineage information as control
-    #how much accuracy in clonal tracing you would get by random
-    #because for small trees clonal tracing might be trivial
-    if(control)
-      ground$tip.label = sample(ground$tip.label)
-
-    genotypes = substr(ground$tip.label,4,14)
-    clones<-table(genotypes)
-    clones<-clones[clones>1]
-
-    if(length(clones)>0){
-        #for each clone
-        all_freqs = c()
-        for(i in 1:length(names(clones))){
-            cells_in_clone = names(clones)[i]
-            clone_in_ground = grep( cells_in_clone ,ground$tip.label,value = T)
-
-            ground_clusters = dendextend::cutree(force.ultrametric(ground),k =k)
-            #get ground_cluster ID for these cells:
-            clone_ID = ground_clusters[clone_in_ground]
-            clone_freqs = table(clone_ID)/length(clone_in_ground)
-
-            all_freqs[i] = clone_freqs
-        }
-        return(all_freqs)
-
-    }else{
-      return(NULL)
-    }
-}
-
-compare_accuracy_control<-function(ks =c(4,3,2),large_colonies){
-
-  #par(mfrow = c(ceiling(length(ks)/2),2))
-  par(mfrow = c(2,2))
-  for(k in ks){
-    res_control<-lapply(large_colonies,clone_accuracy,k_ =k,control =T);
-    res<-lapply(large_colonies,clone_accuracy,k_ =k,control =F);
-
-    d_control = ecdf(unlist(res_control))
-    d = ecdf(unlist(res))
-
-    plot(seq(0,1,0.010),d(seq(0,1,0.010)),type = "l",lwd = 2,col ="blue",
-    main ="Fraction of cells correctly classified (per clone)",
-    xlab="Accuracy", ylab ="Fraction of clones")
-    lines(seq(0,1,0.010),d_control(seq(0,1,0.010)),type = "l",lwd = 2,col ="red")
-
-  }
-
-}
-# # # # # # # #
- # # # # # # #
+# # OLD Methods for clonal accuracy
+#
+# # clonal tracing accuracy  Jul 8th 2019
+# inspect.clusters<-function(file.idx,global = T,globalG = 4,clust.method = "complete",k= 4){
+#     res= inspect.tree(file.idx,plot.all=F,return.tree= T,global,globalG,clust.method)
+#
+#
+#     hc = res[[8]]
+#     hc_reconstructed = res[[9]]
+#     x11()
+#     p=fviz_dend(as.hclust(force.ultrametric(hc)), k = k, # Cut in four groups
+#               cex = 0.9, # label size
+#               k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+#               color_labels_by_k = TRUE, # color labels by groups
+#               rect = TRUE, # Add rectangle around groups
+#               rect_border = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+#               rect_fill = TRUE,
+#               main="reconstructed lineage (membow)",
+#               xlab="cells",ylab="time")
+#
+#     p1=fviz_dend(as.hclust(force.ultrametric(hc_reconstructed)), k = k, # Cut in four groups
+#               cex = 0.9, # label size
+#               k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+#               color_labels_by_k = TRUE, # color labels by groups
+#               rect = TRUE, # Add rectangle around groups
+#               rect_border = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+#               rect_fill = TRUE,
+#               main="reconstructed lineage (membow)",
+#               xlab="cells",ylab="time")
+#
+#     grid.arrange(p,p1,ncol = 2)
+# }
+# #   data.frame(RF=rate.dist,name=all.files$file.name[as.logical(all.files$FISH)])
+#
+# clone_accuracy<-function(file.idx,k_ = 4,control =F){
+#
+#     res<-inspect.tree(file.idx,plot.all = F,return.tree = T,global = F,globalG = 4,clust.method = "diana")
+#
+#
+#
+#     ground = res[[8]]
+#
+#     k = floor(length(ground$tip.label)/k_)
+#     #destroy lineage information as control
+#     #how much accuracy in clonal tracing you would get by random
+#     #because for small trees clonal tracing might be trivial
+#     if(control)
+#       ground$tip.label = sample(ground$tip.label)
+#
+#     genotypes = substr(ground$tip.label,4,14)
+#     clones<-table(genotypes)
+#     clones<-clones[clones>1]
+#
+#     if(length(clones)>0){
+#         #for each clone
+#         all_freqs = c()
+#         for(i in 1:length(names(clones))){
+#             cells_in_clone = names(clones)[i]
+#             clone_in_ground = grep( cells_in_clone ,ground$tip.label,value = T)
+#
+#             ground_clusters = dendextend::cutree(force.ultrametric(ground),k =k)
+#             #get ground_cluster ID for these cells:
+#             clone_ID = ground_clusters[clone_in_ground]
+#             clone_freqs = table(clone_ID)/length(clone_in_ground)
+#
+#             all_freqs[i] = clone_freqs
+#         }
+#         return(all_freqs)
+#
+#     }else{
+#       return(NULL)
+#     }
+# }
+#
+# compare_accuracy_control<-function(ks =c(4,3,2),large_colonies){
+#
+#   #par(mfrow = c(ceiling(length(ks)/2),2))
+#   par(mfrow = c(2,2))
+#   for(k in ks){
+#     res_control<-lapply(large_colonies,clone_accuracy,k_ =k,control =T);
+#     res<-lapply(large_colonies,clone_accuracy,k_ =k,control =F);
+#
+#     d_control = ecdf(unlist(res_control))
+#     d = ecdf(unlist(res))
+#
+#     plot(seq(0,1,0.010),d(seq(0,1,0.010)),type = "l",lwd = 2,col ="blue",
+#     main ="Fraction of cells correctly classified (per clone)",
+#     xlab="Accuracy", ylab ="Fraction of clones")
+#     lines(seq(0,1,0.010),d_control(seq(0,1,0.010)),type = "l",lwd = 2,col ="red")
+#
+#   }
+#
+# }
+# # # # # # # # #
+#  # # # # # # #
 #Additional plot schemes for paper FIGURES
 # "npg" is the palette inspired by nature-like papers
 plot.npg.tree<-function(){

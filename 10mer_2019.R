@@ -17,6 +17,8 @@ library(phytools)
 library(data.table)
 library(cluster)
 library(dplyr)
+library(adephylo)
+library(phylobase)
 
 
 
@@ -780,6 +782,152 @@ old.forloop <-function(){
 }
 
 
+#Clonal accuracy
+# for a given tree it will return the genotypes that appeared in more than 2 cells along with their frequencies
+# The returned object is a table (array with names)
+get.all.clones<-function(file.idx){
+
+  res<-inspect.tree(file.idx,plot.all = F,return.tree = T,global = F,globalG = 4,clust.method = "diana")
+
+  if(length(res)>0){
+
+      ground = res[[8]]
+      reconstruction = res[[9]]
+
+      genotypes = substr(ground$tip.label,4,14 )
+      #table of frequencies for all genotypes
+      a<-table(genotypes)
+      #a[a>1]
+
+    #      this_clone<-names(a[a>1])[7]
+    #      this_size<-a[a>1][7]
+    #      which_cells<-grep(this_clone , res[[8]]$tip.label)
+    #Return the part of the table which includes the genotypes that appeared more than once
+    #in this colony
+      return(a[a>1])
+    }else{
+      return(NULL)
+    }
+}
+
+# New method for clonal accuracy
+# Aug 2019
+# uses MRCA to calculate sub-trees and scores
+clonal.score<-function(id,control=F){
+
+
+      r = inspect.tree(id,plot.all = F, return.tree = T)
+      # if ground truth is not good enough, then returns NULL so check for that
+      if(length(r)>0){
+        # tree is good quality then continue
+        # inspect.tree returns a list where element 8 is the ground_truth tree
+        ground_truth = r[[8]]
+
+        # to calculate the random guess. negative CONTROL
+        if(control)
+          ground_truth$tip.label = sample(ground_truth$tip.label)
+
+
+
+
+        dist_tips = distTips(ground_truth)
+        dist_tips = as.matrix(dist_tips)
+        barcodes = row.names(dist_tips)
+
+        simple_barcodes= str_split(barcodes,"_",simplify=T)[,2]
+
+        clones_here = get.all.clones(id)
+        if(length(clones_here)>0){
+          #for this barcodes, where are all the cells
+          clone_score = c()
+          best_Sb = c()
+          best_Sa = c()
+          clone_totaA = c()
+          #for this BARCode
+          for(i in 1:length(clones_here)){
+              #i = 1
+              # how many cells
+              clone_size = length( which(simple_barcodes==names(clones_here[i])) )
+              masked_barcodes = simple_barcodes
+              masked_barcodes[ which(simple_barcodes==names(clones_here[i])) ] <- rep("A",clone_size)
+              masked_barcodes[masked_barcodes != "A"] = "X"
+              # > masked_barcodes
+              # [1] "X" "X" "X" "X" "X" "X" "X" "A" "A" "A" "X" "X" "X"
+              #rename ground truth
+              ground_truth_masked = ground_truth
+              ground_truth_masked$tip.label = masked_barcodes
+              #get most common ancestor of this clade (includes ALL A)
+              clone_mrca = MRCA( ground_truth ,which(simple_barcodes==names(clones_here[i])))
+              # this is the largest tree that includes all A's
+              clone_tree = extract.clade(ground_truth_masked, clone_mrca)
+              # Here we need a function that iterates over all mrca partitions
+              # Get all subtrees
+              tree_partitions = subtrees(clone_tree)
+              # Save score for all partitions
+              partition_score = c()
+              S_a_array = c()
+              S_b_array = c()
+              # Iterate over all partitions:
+              Tot_A = clone_size # How many A's in the whole MRCA
+              for(t in 1:length(tree_partitions)){
+                  clone_subtree = tree_partitions[[t]] #this is a list
+                  # how many A's in this partition
+                    S_a = length(grep("A",clone_subtree$tip.label))
+                  partition_score[t] = S_a / ( Tot_A + length(clone_subtree$tip.label) - S_a)
+                   # S_a  /  Tot_A   +  cells_considered - S_a
+                   # S_a  / Tot_A + S_b
+                   # length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
+                   S_b = length(clone_subtree$tip.label) - S_a
+
+                   # Save these numbers for false positive and false negative calculation
+                   S_a_array[t] = S_a
+                   S_b_array[t] = S_b
+
+
+              }
+
+              clone_score[i] = max(partition_score)
+              # we can save the index of the best score and then get S_a, Tota_A, Sb
+              best_score_index =which.max(partition_score)
+              best_Sb[i] =  S_b_array[best_score_index]
+              best_Sa[i] =  S_a_array[best_score_index]
+              clone_totaA[i] = Tot_A
+              #masked_barcodes = paste(as.character(1:length(masked_barcodes)),masked_barcodes,sep="" )
+              #clone_score[i] = length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
+            }
+          return(list(clone_totaA,clone_score, best_Sa, best_Sb))
+        }else{
+          return(NULL)
+        }
+      }else{
+        return(NULL)
+      }
+
+
+}
+
+#run for control and all data and make overlapping histogram
+# Final plots (?)
+make.clonal.plot<-function(){
+  # Aug 11th 2019 works well
+  #takes a minute
+  a<-lapply(1:110,clonal.score)
+  a_rand<-lapply(1:110,clonal.score,control=T)
+
+  #make the plots
+  hist(unlist(a),col=rgb(0,0,1,0.5)  ,xlim=c(0,1), ylim=c(0,250), main="Clonal accuracy for all clones", xlab="Score")
+  hist(unlist(a_rand), col=rgb(1,0,0,0.5), add=T)
+  legend("topright", c("All clones", "Random guess"), col=c("blue", "red"), lwd=2)
+
+  #plot ECDF
+  d<-ecdf(unlist(a))
+  d_rand <-ecdf(unlist(a_rand))
+  plot(seq(0,1,0.001) , d(seq(0,1,0.001)) ,type = "l",lwd = 2,
+      main = "Clonal accuracy of all clones",xlab = "Score",
+        ylab="Fraction of clones", col = "blue")
+  lines(seq(0,1,0.001), d_rand(seq(0,1,0.001)),col ="red",lwd = 2)
+
+}
 
 
 

@@ -31,7 +31,8 @@ source("simMemoirStrDist3.R")
 
 #choose the tree from the list:
 
-source("../GraceData/RF.experiment.R")
+#source("../GraceData/RF.experiment.R")
+source("../integrase-data/RF.experiment.R")
 fasta=F
 clust.method=1
 plot.all = 0
@@ -39,15 +40,20 @@ plot.all = 0
 #vars 2019
 translate = T # T if files come with 201 notation
 
-file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_2019/"
+# This indicates whether we are in mac or linux
+# Folder where the integrase-specific scripts are stored
+integrase_folder= "integrase-data/"
 
+#file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_2019/"
+file.path=paste("/home/agranado/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="")
 #save plot for continous recording trees
 plot.path=paste(file.path,"plotsReconstruction/",sep="")
 
 plots.edit.rate = paste(file.path,"plotsEditRate/",sep="")
 
 
-existing.files = list.files("../GraceData/10mer_2019/FISH/")
+#existing.files = list.files("../GraceData/10mer_2019/FISH/")
+existing.files = list.files(  paste("../",integrase_folder,"10mer_2019/FISH/",sep="") )
 #read the xls with all the files info (some are not in the folder)
 all.files=fread(paste(file.path,"results.guide2019.tsv",sep=""))
 #read.newick(text=toString(all.files$newick[1]))
@@ -62,7 +68,7 @@ runAllTrees<-function(clust.method = "diana"){
     res.list=lapply(1:114,inspect.tree, plot.all = F,globalG=4,global = T,clust.method = clust.method)
     res.mat = do.call(rbind, lapply(res.list,unlist) )
     res.mat = as.data.frame(res.mat)
-    names(res.mat)<-c("colony","idx","ncells","memoir","membow","genotypes","edits")
+    names(res.mat)<-c("colony","idx","ncells","memoir","membow","genotypes","edits","cophe","entropy","dc")
     res.mat %>% arrange(desc(membow),desc(memoir)) -> res.mat
 
     return(res.mat)
@@ -130,13 +136,10 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
     ########
       #how many groups for the colors in the dendrogram
       ks= rep(4,length(all.files$Position))
-
-
       k=ks[file.idx]
       #estimMu = estimMu.s[file.idx]
       #estimAlpha=alphas[file.idx]
       estimG =all.files$generations[file.idx]
-
 
   #read csv as dataframe
       posInfo = fread(paste(fileName,files.extension,sep=""),sep="\t",colClasses = 'character')
@@ -150,7 +153,6 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
 
       posInfo$cell = as.character(as.numeric(posInfo$cell))
       #new format ID for cells, take only the last two digits
-
 
       #estimate the edit rate from the fraction of unedited sites
       lengthBarcode = 10
@@ -179,7 +181,7 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
 
     }else{
        #GLOBAL parameters , per site
-       param.list = estim.params.global(estimG = globalG,file = "../GraceData/10mer_2019/editRate/allBarcodes.txt")
+       param.list = estim.params.global(estimG = globalG,file = paste("../",integrase_folder,"10mer_2019/editRate/allBarcodes.txt",sep="" ))
        estimMu = param.list[[1]] #these are vectors!
        estimAlpha = param.list[[2]]
     }
@@ -188,31 +190,23 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
      tt=apply(as.matrix(barcodes),2,strsplit,"")
      mat.sites = t(do.call(cbind,do.call(cbind,tt)))
      rate.per.site = apply(mat.sites!="u",2,sum)/dim(mat.sites)[1]
-
-
      rate.per.site = t(rate.per.site)
-
 
      #order: x, r, u
      #save rates as appended file independently: WORKS
      alphabet =c("u","r","x")
-
-
-
 
         # 1.2- calculate distance matrix
         ground.truth = all.files$newick[file.idx]
         true.tree=read.newick(text=toString(ground.truth))
 
         if(global){
-
           matdist_=manualDistML_2(as.character(barcodes),estimMu,estimAlpha,estimG )
           #colnames(matdist_)<-barcodes
           #row.names(matdist_)<-barcodes
         }else{
           matdist_=manualDistML__(as.character(barcodes),estimMu,estimAlpha,estimG )
         }
-
         #translate tip names
 
                 tip.names = paste(names(barcodes),barcodes,sep="_")
@@ -241,20 +235,13 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
 
         }
 
-
-
-
         manualTree = hclust.tree
-
-
-
         manualTree$tip.label<- tip.names
         #sometimes there are edges with negative values (-6e-18) which should not happen
         manualTree$edge.length[manualTree$edge.length<0]=0
         #hc.manual=as.hclust(reverseLabels(manualTree))
         hc.manual=as.hclust(manualTree)
         # for saving ggsave("membow_31_2tree.pdf", device=CairoPDF)
-
 
         # 2.- calculate the MEMOIR full distance RF
         # Also depurate the ground truth tree from dead cells
@@ -275,7 +262,9 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
         #we can make a vector of distances :
         colnames(matdist_)<-tip.names;row.names(matdist_)<-tip.names
         d1=this.score
-        d2=RF.dist(as.phylo(as.hclust( diana(matdist_+t(matdist_) ) )),alive.tree,normalize=T)
+         diana_res = diana(matdist_+t(matdist_) )
+         dc = diana_res$dc #divisive coefficient
+        d2=RF.dist(as.phylo(as.hclust( diana_res ) ),alive.tree,normalize=T)
       #  if(rand.dist>0){d2 = 1-d2/rand.dist}
         d2 = 1-d2
         #distance 2
@@ -284,7 +273,7 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
         # 4.- MEMbow distance:
         if(length(barcodes)>4){
           d3.list = normalized.RF.membow(true.tree,manualTree,barcodes,posInfo,make.plots=plot.all,
-                  file.name = file.name, clust.method = clust.method, global = global,globalG=globalG)
+                  file.name = file.name, clust.method = clust.method, global = global,globalG=globalG,file.path=file.path)
           d3 =d3.list[[1]]
           n.colony=d3.list[[2]]
 
@@ -292,21 +281,16 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
 
 
         if(plot.all==T){
+          #  x11()
+            par(mfrow = c(2,2))
+            par(family="mono")
+            par(cex = 1.1)
+            plot.phylo(alive.tree,main ="ground truth")
+            plot.phylo(manualTree,main = paste("reconstruction:",toString(round(d1,digits = 2))))
 
-        #  x11()
-          par(mfrow = c(2,2))
-          par(family="mono")
-          par(cex = 1.1)
-          plot.phylo(alive.tree,main ="ground truth")
-          plot.phylo(manualTree,main = paste("reconstruction:",toString(round(d1,digits = 2))))
-
-          plot.phylo(d3.list[[3]],main = "reduced ground truth")
-          plot.phylo(d3.list[[4]],main = paste("reduced reconstruction:", toString( round(d3,digits = 2)  )))
+            plot.phylo(d3.list[[3]],main = "reduced ground truth")
+            plot.phylo(d3.list[[4]],main = paste("reduced reconstruction:", toString( round(d3,digits = 2)  )))
         }
-
-
-        # d3=RF.dist(as.phylo(upgma(matdist_1+t(matdist_1))), alive.tree  )
-        # if(rand.dist>0){d3 = 1-d3/rand.dist}
 
 
         # 5.- Fraction of edited sites
@@ -322,23 +306,161 @@ inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG 
       cat( paste("id:",file.idx,"name:", file.name, toString(file.idx),"Full:", toString(round(d1,digits =3)), "N=",toString(length(barcodes)) , "--- MEMbow:", toString(round(d3,digits = 3)),"N =",toString(n.colony),"Pr_edit",toString(1-d4),"\n",sep="\t" ))
         #WRITE FILE RF distance
 
-
+        cophe = cor(cophenetic(as.hclust(manualTree)),as.dist(matdist_1 + t(matdist_1)))
+        entro = barcodeEntropy(manualTree)
         #WRITE FILE NEWICK reconstructed
 
         if(!return.tree){
-          return(list(file.name,file.idx,length(barcodes),d1,d3,n.colony, 1-d4))
+          return( list(file.name,file.idx,length(barcodes),d1,d3,n.colony, 1-d4,cophe,sum(entro),dc))
         }else{
-          return(list(file.name,file.idx,length(barcodes),d1,d3,n.colony, 1-d4, alive.tree,manualTree))
+          return(list(file.name,file.idx,length(barcodes),d1,d3,n.colony, 1-d4, alive.tree,manualTree,matdist_1))
         }
 
   }
 
+}
 
 
-  #
+
+
+
+
+#Clonal accuracy
+# for a given tree it will return the genotypes that appeared in more than 2 cells along with their frequencies
+# The returned object is a table (array with names)
+get.all.clones<-function(file.idx){
+
+  res<-inspect.tree(file.idx,plot.all = F,return.tree = T,global = F,globalG = 4,clust.method = "diana")
+
+  if(length(res)>0){
+
+      ground = res[[8]]
+      reconstruction = res[[9]]
+
+      genotypes = substr(ground$tip.label,4,14 )
+      #table of frequencies for all genotypes
+      a<-table(genotypes)
+      #a[a>1]
+
+    #      this_clone<-names(a[a>1])[7]
+    #      this_size<-a[a>1][7]
+    #      which_cells<-grep(this_clone , res[[8]]$tip.label)
+    #Return the part of the table which includes the genotypes that appeared more than once
+    #in this colony
+      return(a[a>1])
+    }else{
+      return(NULL)
+    }
+}
+
+# New method for clonal accuracy
+# Aug 2019
+# uses MRCA to calculate sub-trees and scores
+clonal.score<-function(id,control=F){
+
+
+      r = inspect.tree(id,plot.all = F, return.tree = T)
+      # if ground truth is not good enough, then returns NULL so check for that
+      if(length(r)>0){
+        # tree is good quality then continue
+        # inspect.tree returns a list where element 8 is the ground_truth tree
+        ground_truth = r[[8]]
+
+        # to calculate the random guess. negative CONTROL
+        if(control)
+          ground_truth$tip.label = sample(ground_truth$tip.label)
+
+
+
+
+        dist_tips = distTips(ground_truth)
+        dist_tips = as.matrix(dist_tips)
+        barcodes = row.names(dist_tips)
+
+        simple_barcodes= str_split(barcodes,"_",simplify=T)[,2]
+
+        clones_here = get.all.clones(id)
+        if(length(clones_here)>0){
+          #for this barcodes, where are all the cells
+          clone_score = c()
+          #for this BARCode
+          for(i in 1:length(clones_here)){
+              #i = 1
+              # how many cells
+              clone_size = length( which(simple_barcodes==names(clones_here[i])) )
+              masked_barcodes = simple_barcodes
+              masked_barcodes[ which(simple_barcodes==names(clones_here[i])) ] <- rep("A",clone_size)
+              masked_barcodes[masked_barcodes != "A"] = "X"
+              # > masked_barcodes
+              # [1] "X" "X" "X" "X" "X" "X" "X" "A" "A" "A" "X" "X" "X"
+              #rename ground truth
+              ground_truth_masked = ground_truth
+              ground_truth_masked$tip.label = masked_barcodes
+              #get most common ancestor of this clade (includes ALL A)
+              clone_mrca = MRCA( ground_truth ,which(simple_barcodes==names(clones_here[i])))
+              # this is the largest tree that includes all A's
+              clone_tree = extract.clade(ground_truth_masked, clone_mrca)
+              # Here we need a function that iterates over all mrca partitions
+              # Get all subtrees
+              tree_partitions = subtrees(clone_tree)
+              # Save score for all partitions
+              partition_score = c()
+              # Iterate over all partitions:
+              Tot_A = clone_size # How many A's in the whole MRCA
+              for(t in 1:length(tree_partitions)){
+                  clone_subtree = tree_partitions[[t]] #this is a list
+                  # how many A's in this partition
+                    S_a = length(grep("A",clone_subtree$tip.label))
+                  partition_score[t] = S_a / ( Tot_A + length(clone_subtree$tip.label) - S_a)
+                   # S_a  /  Tot_A   +  cells_considered - S_a
+                   # S_a  / Tot_A + S_b
+                   # length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
+              }
+
+              clone_score[i] = max(partition_score)
+
+              #masked_barcodes = paste(as.character(1:length(masked_barcodes)),masked_barcodes,sep="" )
+              #clone_score[i] = length(grep("A",clone_tree$tip.label)) / ( clone_size + length(clone_tree$tip.label) - length(grep("A",clone_tree$tip.label)) )
+            }
+          return(clone_score)
+        }else{
+          return(NULL)
+        }
+      }else{
+        return(NULL)
+      }
 
 
 }
+
+#run for control and all data and make overlapping histogram
+# Final plots (?)
+make.clonal.plot<-function(){
+  # Aug 11th 2019 works well
+  #takes a minute
+  a<-lapply(1:110,clonal.score)
+  a_rand<-lapply(1:110,clonal.score,control=T)
+
+  #make the plots
+  hist(unlist(a),col=rgb(0,0,1,0.5)  ,xlim=c(0,1), ylim=c(0,250), main="Clonal accuracy for all clones", xlab="Score")
+  hist(unlist(a_rand), col=rgb(1,0,0,0.5), add=T)
+  legend("topright", c("All clones", "Random guess"), col=c("blue", "red"), lwd=2)
+
+  #plot ECDF
+  d<-ecdf(unlist(a))
+  d_rand <-ecdf(unlist(a_rand))
+  plot(seq(0,1,0.001) , d(seq(0,1,0.001)) ,type = "l",lwd = 2,
+      main = "Clonal accuracy of all clones",xlab = "Score",
+        ylab="Fraction of clones", col = "blue")
+  lines(seq(0,1,0.001), d_rand(seq(0,1,0.001)),col ="red",lwd = 2)
+
+}
+
+
+
+
+
+
 
 old.forloop <-function(){
     #this file information
@@ -635,8 +757,9 @@ old.forloop <-function(){
               write.tree(manualTree,file=newick.out)
 
             }
-        # # # # # # # # # # #
-         # # # # # # # # # # #
+
+
+
         #Alternative: use the hclust method from R
 
           if(clust.method ==2){
@@ -653,7 +776,7 @@ old.forloop <-function(){
 
     }# # # # # # # #
     # # # # # # # # #
-     # # # # # # # # 
+    # # # # # # # # 
     #END MAIN FOR
 
 }

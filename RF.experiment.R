@@ -132,7 +132,7 @@ normalized.RF.experiment<-function(true.tree, manualTree, barcodes,posInfo){
 
   }
 file.path.membow = file.path
-file.path.memoir = "/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer/"
+#file.path.memoir = paste("/Users/alejandrog/MEGA/Caltech/trees/",integrase_folder,"10mer/",sep="")
 
 normalized.RF.membow__old<-function(true.tree,manualTree,barcodes,posInfo){
 
@@ -196,8 +196,8 @@ normalized.RF.membow__old<-function(true.tree,manualTree,barcodes,posInfo){
 
 
 normalized.RF.membow<-function(true.tree,manualTree,barcodes,posInfo,make.plots=F,file.name = "",
-                      clust.method = "complete",global = T,globalG =4){
-      file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_2019/"
+                      clust.method = "complete",global = T,globalG =4,file.path = "/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_2019/" ){
+
 
       mem.method = 1
   # 1. Find clusters based on identical genotypes
@@ -233,7 +233,7 @@ normalized.RF.membow<-function(true.tree,manualTree,barcodes,posInfo,make.plots=
               param.list = estim.params(barcodes.raw) #estimate all parameters from the unique list
 
               if(global){
-                param.list = estim.params.global(estimG = globalG,file = "../GraceData/10mer_2019/editRate/allBarcodes.txt")
+                param.list = estim.params.global(estimG = globalG,file = paste(file.path,"editRate/allBarcodes.txt",sep=""))
                 estimMu = param.list[[1]] #these are vectors!
                 estimAlpha = param.list[[2]]
 

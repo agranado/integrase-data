@@ -17,7 +17,7 @@ library(phytools)
 library(data.table)
 library(cluster)
 library(dplyr)
-library(adephylo)
+#library(adephylo)
 library(phylobase)
 
 
@@ -30,9 +30,18 @@ source("simMemoirStrDist3.R")
 # system("rm /Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_2019/editRate/*")
 
 #choose the tree from the list:
+if(grep("linux",read.table("../os.txt")$V1)){
+    source("../integrase-data/RF.experiment.R")
+    integrase_folder= "integrase-data/" # For Ubuntu
+    file.path=paste("/home/agranado/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="") # Ubuntu
 
-source("../GraceData/RF.experiment.R")
-#source("../integrase-data/RF.experiment.R")
+}else{
+    source("../GraceData/RF.experiment.R")
+    integrase_folder = "GraceData/"     # For Mac
+    file.path=paste("/users/alejandrog/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="") # Mac
+}
+
+
 fasta=F
 clust.method=1
 plot.all = 0
@@ -42,12 +51,10 @@ translate = T # T if files come with 201 notation
 
 # This indicates whether we are in mac or linux
 # Folder where the integrase-specific scripts are stored
-integrase_folder= "integrase-data/" # For Ubuntu
-integrase_folder = "GraceData/"     # For Mac
+
+
 
 #file.path="/Users/alejandrog/MEGA/Caltech/trees/GraceData/10mer_2019/"
-file.path=paste("/home/agranado/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="") # Ubuntu
-file.path=paste("/users/alejandrog/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="") # Mac
 
 #save plot for continous recording trees
 plot.path=paste(file.path,"plotsReconstruction/",sep="")

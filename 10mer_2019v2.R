@@ -27,12 +27,6 @@ if(grep("linux",read.table("../os.txt")$V1)){
     file.path=paste("/users/alejandrog/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="") # Mac
 }
 
-# barcode.processing
-# input: meta.data as .xls and barcodes as .txt
-# outptu: tidy data frame with barcodes + ground truth after filtering.
-# It has to create new barcode files and new ground.truth
-# output folder for new barcode files and meta.data is ./filteredData/
-
 # One functionality is to apply sistematic filters to the data in order to find out the sources of error
 # Thus the function needs to filter by cell or by tree and generate a new filtered_dataset
 
@@ -48,8 +42,83 @@ files_to_process = which(all.files$file.name %in% str_split(existing.files,"\\."
 # Some colonies have N/A in the ground truth field. So let's remove that
 files_to_process = files_to_process[files_to_process != grep("N/A",all.files$newick)]
 
-# Works OK Aug 29th
-barcode.processing<-function(file.idx){
+
+
+# # # #
+# # # #
+# Main Functions
+# Sep 4th
+
+# High level functions
+# Perform all analysis and call sub-functions
+
+# USAGE : process.all.files(files_to_process) %>% reconstruct.all.lineages() -> memoirData
+
+
+# FIRST MAIN FUNCTION
+process.all.files <- function(files_to_process,remove_largeDels = F) {
+
+  aa = lapply(files_to_process,barcode.processing,remove_largeDels)
+  aa=do.call(rbind,lapply(aa,unlist))
+  colnames(aa)<-c("fileID","fileName","nCells","edit","dels","ground")
+  aa<-as.data.frame(aa)
+
+  #data frame is in factor format
+  #to make our lives easier we can convert it to numeric
+  indx<-sapply(aa,is.factor)
+  indx[2] = FALSE #this is character
+  indx[6] = FALSE # this is character
+  aa[indx] <- lapply(aa[indx], function(x) as.numeric(as.character(x)))
+
+  return(aa)
+}
+
+# SECOND main function
+reconstruct.all.lineages <-function(dataTree){
+  dataTree %>% filter(nCells>2) -> dataTree
+
+
+  # dataTree is our first data sctructure
+  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree)
+  aa = do.call(rbind,aa)
+  aa <- as.data.frame(aa)
+  names(aa) <- c("fileName","nCells","edit","dels","RF","ground","rec")
+
+  indx<-sapply(aa,is.factor)
+  indx[1] = FALSE #this is character
+  indx[6] = FALSE # this is character
+  indx[7] = FALSE # this is character
+  aa[indx] <- lapply(aa[indx], function(x) as.numeric(as.character(x)))
+
+  return(aa)
+
+
+}
+# Global parameter for reconstructing ALL trees
+
+
+
+
+
+
+
+#
+params_global = estim.params.global(estimG = 4, fil = paste("../",integrase_folder,"10mer_2019/editRate/allBarcodes.txt",sep=""))
+mu = params_global[[1]]
+alpha = params_global[[2]]
+
+
+
+
+# Works OK Sep 4th
+
+# barcode.processing
+# input: meta.data as .xls and barcodes as .txt
+# outptu: tidy data frame with barcodes + ground truth after filtering.
+# It has to create new barcode files and new ground.truth
+# output folder for new barcode files and meta.data is ./filteredData/
+
+barcode.processing<-function(file.idx,remove_largeDels = F){
 
         # Where to save the filtered barcode set
         barcode_path = paste(file.path,"filteredData/",sep="")
@@ -74,65 +143,46 @@ barcode.processing<-function(file.idx){
         # state has the barcode readout
         # cell has the cell's name (number ID)
         keep_this_cells = !is.na(posInfo$cell) & !posInfo$state==paste(rep("0",barcodeLength),collapse="")
-        barcodes = posInfo$state[keep_this_cells]
-        names(barcodes) =posInfo$cell[keep_this_cells]
 
-        # WRITE the filtered barcodes to file.
-        # This will match the new filtered ground truth for further reconstruction
-        # WORKS
-        write.table( data.frame(cell = names(barcodes), state=barcodes) , file=paste(file.path,'filteredData/', file.name,'.txt',sep=""), quote=FALSE, sep='\t',row.names = F)
+        # remove cells with large deletions: 4 or more deletions 0000
+        if(remove_largeDels) keep_this_cells = keep_this_cells & !grepl("0000",posInfo$state)
+        # NOTE: I need to put some filter such that if we are left without cells after filtering, just skip this colony
+
+        # IF (no cells ){ return (NULL ) } else { keep going}
+                barcodes = posInfo$state[keep_this_cells]
+                names(barcodes) =posInfo$cell[keep_this_cells]
+
+                # WRITE the filtered barcodes to file.
+                # This will match the new filtered ground truth for further reconstruction
+                # WORKS
+                write.table( data.frame(cell = names(barcodes), state=barcodes) , file=paste(file.path,'filteredData/', file.name,'.txt',sep=""), quote=FALSE, sep='\t',row.names = F)
 
 
-        # Extract the ground truth from the file
-        # Here the ground truth has ALL cells, including those with deletions, low-quality etc.
-        ground.truth = all.files$newick[file.idx]
+                # Extract the ground truth from the file
+                # Here the ground truth has ALL cells, including those with deletions, low-quality etc.
+                ground.truth = all.files$newick[file.idx]
 
-        true.tree=read.newick(text=toString(ground.truth))
+                true.tree=read.newick(text=toString(ground.truth))
 
 
-        # barcodes is already a filtered list. We need to keep only those cells
-        # so we filter everything else from the ground truth (dead cells, XXXXXX, etc. )
-        alive.tree = filter.cells.groundTruth(barcodes,true.tree)
+                # barcodes is already a filtered list. We need to keep only those cells
+                # so we filter everything else from the ground truth (dead cells, XXXXXX, etc. )
+                alive.tree = filter.cells.groundTruth(barcodes,true.tree)
 
-        #fraction of edited sites
+                #fraction of edited sites
 
-        b=as.matrix(do.call(cbind,strsplit(barcodes,"")))
-        d4=sum(b=="1")/prod(dim(b))
+                b=as.matrix(do.call(cbind,strsplit(barcodes,"")))
+                d4=sum(b=="1")/prod(dim(b))
+                # deletion rate:
+                d0=sum(b=="0")/prod(dim(b))
 
         # FILE_ID   NCELLS    PR_EDIT   GROUND_TRUTH
-        return(list(file.idx,file.name, length(barcodes), d4, write.tree(alive.tree)  ) )
+        return(list(file.idx,file.name, length(barcodes), d4, d0,  write.tree(alive.tree)  ) )
         # WE can now save everything in a new data.frame
         # let.save individual components in
 
 
 }
-
-# More convenient way of executing all files
-# This will write to disk a new version of barcode files
-# The new data frame has the names of the files and the filtered ground truth
-# Output: data frame
-process.all.files <- function(files_to_process) {
-
-  aa = lapply(files_to_process,barcode.processing)
-  aa=do.call(rbind,lapply(aa,unlist))
-  colnames(aa)<-c("fileID","fileName","nCells","edit","ground")
-  aa<-as.data.frame(aa)
-
-  #data frame is in factor format
-  #to make our lives easier we can convert it to numeric
-  indx<-sapply(aa,is.factor)
-  indx[2] = FALSE #this is character
-  indx[5] = FALSE # this is character
-  aa[indx] <- lapply(aa[indx], function(x) as.numeric(as.character(x)))
-
-  return(aa)
-}
-
-
-# Global parameter for reconstructing ALL trees
-params_global = estim.params.global(estimG = 4, fil = paste("../",integrase_folder,"10mer_2019/editRate/allBarcodes.txt",sep=""))
-mu = params_global[[1]]
-alpha = params_global[[2]]
 
 
 
@@ -140,7 +190,7 @@ alpha = params_global[[2]]
 # Output list of ground truth lineages: ready to be reconstructed
 # Can be used to get ALL ground_truth lineages like :
 # lapply(1:dim(dataTree)[1],reconstruct.lineages,dataTree=dataTree)
-reconstruct.lineages <- function(file.idx,dataTree){
+reconstruct.lineages <- function(file.idx,dataTree,control =F){
 
 
 
@@ -150,7 +200,12 @@ reconstruct.lineages <- function(file.idx,dataTree){
     ground_phylo = as.phylo(read.newick(text = toString(groundTruth)))
 
     # we keep just the cell number, i.e. remove the frame (216) which is no useful
-    sample_tips<-str_split(ground_phylo$tip.label,"_",simplify = T)[,2]
+    # For random control we just re-sample the tips
+    if(!control){
+      sample_tips<-str_split(ground_phylo$tip.label,"_",simplify = T)[,2]
+    }else{
+      sample_tips<-sample(str_split(ground_phylo$tip.label,"_",simplify = T)[,2])
+    }
     # We need the labels to be in the same order as in the tree
     # We match the tips order to the barcode data
     # Then we take from the barcode data using the matching indexes
@@ -161,7 +216,7 @@ reconstruct.lineages <- function(file.idx,dataTree){
 
     RF_score = 1- RF.dist(manualTree,ground_phylo,normalize = T)
 
-    results_row = c(as.character(dataTree$fileName[file.idx]),toString(length(ground_phylo$tip.label)), toString(RF_score) , write.tree(ground_phylo), write.tree(manualTree) )
+    results_row = c(as.character(dataTree$fileName[file.idx]),toString(length(ground_phylo$tip.label)), toString(dataTree$edit[file.idx]), toString(dataTree$dels[file.idx]),  toString(RF_score) , write.tree(ground_phylo), write.tree(manualTree) )
 
     return(results_row)
 

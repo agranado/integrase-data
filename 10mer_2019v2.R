@@ -6,7 +6,8 @@ library(data.table)
 library(phangorn)
 library(cluster)
 library(stringr)
-
+library(phytools)
+library(dplyr)
 # Goals:
 # barcode.processing function that filters bad cells and bad colonies
 # thus creating a data.frame with metadata for good trees to be included
@@ -74,12 +75,12 @@ process.all.files <- function(files_to_process,remove_largeDels = F) {
 }
 
 # SECOND main function
-reconstruct.all.lineages <-function(dataTree){
-  dataTree %>% filter(nCells>2) -> dataTree
+reconstruct.all.lineages <-function(dataTree,min.cells = 2,clust.method = "diana"){
+  dataTree %>% dplyr::filter(nCells>min.cells) -> dataTree
 
 
   # dataTree is our first data sctructure
-  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree)
+  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree, clust.method = clust.method)
   aa = do.call(rbind,aa)
   aa <- as.data.frame(aa)
   names(aa) <- c("fileName","nCells","edit","dels","RF","ground","rec")
@@ -120,6 +121,7 @@ alpha = params_global[[2]]
 
 barcode.processing<-function(file.idx,remove_largeDels = F){
 
+        print( paste("processing file ", toString(file.idx), all.files$file.name[file.idx]))
         # Where to save the filtered barcode set
         barcode_path = paste(file.path,"filteredData/",sep="")
 
@@ -145,10 +147,11 @@ barcode.processing<-function(file.idx,remove_largeDels = F){
         keep_this_cells = !is.na(posInfo$cell) & !posInfo$state==paste(rep("0",barcodeLength),collapse="")
 
         # remove cells with large deletions: 4 or more deletions 0000
-        if(remove_largeDels) keep_this_cells = keep_this_cells & !grepl("0000",posInfo$state)
+        if(remove_largeDels) keep_this_cells = keep_this_cells & !grepl("000",posInfo$state)
         # NOTE: I need to put some filter such that if we are left without cells after filtering, just skip this colony
-
-        # IF (no cells ){ return (NULL ) } else { keep going}
+        print( paste(toString(sum(keep_this_cells)), "cells included _  ", toString(sum(grepl("000",posInfo$state))) ," large deletions" ))
+        #remove: IF (no cells ){ return (NULL ) } else { keep going}
+        if(sum(keep_this_cells)>0){
                 barcodes = posInfo$state[keep_this_cells]
                 names(barcodes) =posInfo$cell[keep_this_cells]
 
@@ -176,11 +179,13 @@ barcode.processing<-function(file.idx,remove_largeDels = F){
                 # deletion rate:
                 d0=sum(b=="0")/prod(dim(b))
 
-        # FILE_ID   NCELLS    PR_EDIT   GROUND_TRUTH
-        return(list(file.idx,file.name, length(barcodes), d4, d0,  write.tree(alive.tree)  ) )
-        # WE can now save everything in a new data.frame
-        # let.save individual components in
-
+                # FILE_ID   NCELLS    PR_EDIT   GROUND_TRUTH
+                return(list(file.idx,file.name, length(barcodes), d4, d0,  write.tree(alive.tree)  ) )
+                # WE can now save everything in a new data.frame
+                # let.save individual components in
+          }else{
+            return(NULL)
+          }
 
 }
 
@@ -190,7 +195,7 @@ barcode.processing<-function(file.idx,remove_largeDels = F){
 # Output list of ground truth lineages: ready to be reconstructed
 # Can be used to get ALL ground_truth lineages like :
 # lapply(1:dim(dataTree)[1],reconstruct.lineages,dataTree=dataTree)
-reconstruct.lineages <- function(file.idx,dataTree,control =F){
+reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method = "diana"){
 
 
 
@@ -212,7 +217,7 @@ reconstruct.lineages <- function(file.idx,dataTree,control =F){
     ground_phylo$tip.label = paste(posInfo$cell,"_",posInfo$state[match(sample_tips,posInfo$cell)],sep="")
 
     # This function takes the barcodes fromt he groun truth tree and reconstructs an independent lineage
-    manualTree = reconstructLineage(ground_phylo,mu,alpha,return_tree = T)
+    manualTree = reconstructLineage(ground_phylo,mu,alpha,return_tree = T,clust.method = clust.method)
 
     RF_score = 1- RF.dist(manualTree,ground_phylo,normalize = T)
 
@@ -255,7 +260,7 @@ filter.cells.groundTruth<-function(barcodes,true.tree){
 # this function reconstructs a single lineage
 # It takes the barcode from the ground truth tree
 
-reconstructLineage<-function(ground_phylo,mu,alpha,return_tree = F){
+reconstructLineage<-function(ground_phylo,mu,alpha,return_tree = F,clust.method = "diana"){
 
   #get the barcode and cell id (cell id is not neccessarily continuous numbers)
   barcodes = str_split(ground_phylo$tip.label,"_",simplify=T)[,2]
@@ -268,10 +273,12 @@ reconstructLineage<-function(ground_phylo,mu,alpha,return_tree = F){
   #recontruct the tree
   matdist_=manualDistML_2(as.character(barcodes_urx),mu = mu ,alpha = alpha,nGen = 4 )
 
+  matdist_2 = cousinDistML(as.character(barcodes_urx),mu = mu ,alpha = alpha,nGen = 4 )
+
   row.names(matdist_)<- paste(cell_ids,barcodes,sep="_")
   colnames(matdist_)<- paste(cell_ids,barcodes,sep="_")
 
-  hclust.tree = as.phylo(as.hclust( diana(as.dist(t(matdist_)))))
+  hclust.tree = clusterDistMatrix(matdist_,clust.method)
 
   #here ground_phylo is "the ground truth" which is a simulation but this is what we want
   d = 1- RF.dist(hclust.tree,ground_phylo,normalize =T)
@@ -280,5 +287,92 @@ reconstructLineage<-function(ground_phylo,mu,alpha,return_tree = F){
   }else{
     return(d)
   }
+
+}
+
+# In principle, we can use any clustering method to recover a dendrogram from the
+# distance matrix. Divisive clustering (diana) show higher performance than other clustering method
+# D2.ward & complete_linkage methods also perform well
+clusterDistMatrix<-function(matdist_,clust.method = "diana"){
+
+  if(clust.method =="diana"){
+    hclust.tree = as.phylo(as.hclust( diana(as.dist(t(matdist_)))))
+  }else {
+
+    hclust.tree=as.phylo(hclust(as.dist(t(matdist_)),method = clust.method))
+  }
+
+    return(hclust.tree)
+}
+
+
+# IDEA:
+# use DIANA to reconstruct the early lineage
+# cut the tree at 3 groups and then reconstruct each subgroup with hclust (which is best for sister and small groups)
+library(dendextend)
+
+recursiveReconstruction<-function(ground_phylo,mu,alpha, second.clust.method= "ward.D2"){
+  ngroups = 3
+  #get the DIANA tree first
+  diana_tree<-reconstructLineage(ground_phylo,mu,alpha,T,clust.method="diana")
+  diana_labels = cutree(diana_tree,k=ngroups) #returns cluster labels for each cell
+  # CONVERT  the whole tree to dendrogram class
+   ground_dendro = as.dendrogram.phylo(ground_phylo)
+
+
+   # FOR 1:3   (assuming 3 main clades)
+
+
+
+
+   # Then we have to find out, which is the other main partition
+   # We have the labels, so we might need to explore
+
+   ##xx$tip.label<-sample(xx$tip.label)
+
+   # NOTE: do something to xx (i.e. reconstruct)
+
+   # convert back to phylogram and replace
+   ground_dendro[[1]]<-as.dendrogram.phylo(xx)
+   x11();plot(ground_dendro)
+
+
+
+
+}
+
+
+findCladeRecursive<-function(ground_dendro,diana_labels){
+
+
+    # this structure comes as a list so we could take the principal branches directly
+    # ground_dendro[[1]] and ground_dendro[[2]] are the two main clades (this is a binary tree)
+    main_clade1 = as.phylo(ground_dendro[[1]])
+    main_clade2 = as.phylo(ground_dendro[[2]])
+
+
+    index_clade = c()
+
+    for(i in 1:ngroups){
+      index_clade[i]= length(which(main_clade2$tip.label %in% names(diana_labels)[diana_labels==i] ))>0
+    }
+
+
+
+}
+
+
+
+  #
+  # for(i in 1:ngroups){
+  #   subclade = extract.clade(diana_tree,MRCA(diana_tree,names(diana_labels[which(diana_labels==1)])))
+  #
+  #   # this command removes the tips we indicated and returns the rest of the tree
+  #   outgroup = dendextend::prune(ground_dendro,leaves =  names(diana_labels[which(diana_labels==1)]))
+  #
+  #   # reconstruct subclade
+  #
+  #     node.leaves(phylogeny, node)
+  # }
 
 }

@@ -134,7 +134,7 @@ compareClustering<-function(methods = c("diana","complete","ward.D2","single","a
 
 }
 
-inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG = 4,clust.method = "complete"){
+inspect.tree<-function(file.idx,plot.all = T,return.tree = F,global = T,globalG = 4,clust.method = "diana"){
 
 
   files.extension = all.files$file.extension[file.idx]

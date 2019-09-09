@@ -317,7 +317,7 @@ recursiveReconstruction<-function(ground_phylo,mu,alpha, second.clust.method= "w
   diana_tree<-reconstructLineage(ground_phylo,mu,alpha,T,clust.method="diana")
   diana_labels = cutree(diana_tree,k=ngroups) #returns cluster labels for each cell
   # CONVERT  the whole tree to dendrogram class
-   ground_dendro = as.dendrogram.phylo(ground_phylo)
+   ground_dendro = as.dendrogram.phylo(diana_tree)
 
 
    # FOR 1:3   (assuming 3 main clades)
@@ -357,6 +357,14 @@ findCladeRecursive<-function(ground_dendro,diana_labels){
       index_clade[i]= length(which(main_clade2$tip.label %in% names(diana_labels)[diana_labels==i] ))>0
     }
 
+
+    #quick and dirty try for 2 groups
+    for(j in 1:2){
+      main_clade =   as.phylo(ground_dendro[[j]])
+      main_clade_clust  = reconstructLineage(main_clade, mu,alpha, return_tree = T, clust.method = "ward.D2")
+
+      ground_dendro[[j]]<- as.dendrogram.phylo(main_clade_clust)
+    }
 
 
 }

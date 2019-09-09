@@ -17,7 +17,7 @@ library(dplyr)
 # Set up the full path for the data
 # Barcode data is in the folder FISH/
 # Main folder is ../integrase_folder/10mer_2019/
-if(grep("linux",read.table("../os.txt")$V1)){
+if(length(grep("linux",read.table("../os.txt")$V1))){
     source("../integrase-data/RF.experiment.R")
     integrase_folder= "integrase-data/" # For Ubuntu
     file.path=paste("/home/agranado/MEGA/Caltech/trees/",integrase_folder,"10mer_2019/",sep="") # Ubuntu
@@ -383,4 +383,4 @@ findCladeRecursive<-function(ground_dendro,diana_labels){
   #     node.leaves(phylogeny, node)
   # }
 
-}
+#}

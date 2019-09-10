@@ -331,7 +331,7 @@ library(dendextend)
 
 recursiveReconstruction<-function(ground_phylo,mu,alpha, second.clust.method= "ward.D2",min.tree.size = 9){
 
-  if(length(ground_phylo$tip.label)>min.tree.size){
+  # if(length(ground_phylo$tip.label)>min.tree.size){
       ngroups = 3
       #get the DIANA tree first
       diana_tree<-reconstructLineage(ground_phylo,mu,alpha,T,clust.method="diana")
@@ -360,15 +360,15 @@ recursiveReconstruction<-function(ground_phylo,mu,alpha, second.clust.method= "w
 
        return(recursive_phylo)
 
-   }else{
-       #do nothing
-       return(ground_phylo)
-   }
+   # }else{
+   #     #do nothing
+   #     return(ground_phylo)
+   # }
 
 }
 
 
-findCladeRecursive<-function(ground_phylo,diana_labels,mu,alpha,second.clust.method = "ward.D2"){
+findCladeRecursive<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D2",min.tree.size = 9){
 
     # This function will use the drndrogram object which can be easily accessed
     ground_dendro = as.dendrogram.phylo(ground_phylo)
@@ -379,15 +379,24 @@ findCladeRecursive<-function(ground_phylo,diana_labels,mu,alpha,second.clust.met
     main_clade1 = as.phylo(ground_dendro[[1]])
     main_clade2 = as.phylo(ground_dendro[[2]])
 
+    # steps:
+    # 1. partition the tree
+    # 2. for each  branch, check that it is larger that 9 cells,
+    # 3. IF so then recursive
+    # 4. IF no then return as phylo
 
-    # index_clade = c()
-    #
-    # for(i in 1:ngroups){
-    #   index_clade[i]= length(which(main_clade2$tip.label %in% names(diana_labels)[diana_labels==i] ))>0
-    # }
+    # if the subtree is larger than the minimum number of cells we do recursive function, until it returns
+    # it will return if we reach a leave or if we reach a subtree with less thatn min.tree.size cells
+    if(length(main_clade1$tip.label)>min.tree.size){
+        main_clade1 = findCladeRecursive(main_clade1,mu,alpha)
+    }
+
+    if(length(main_clade2$tip.label)>min.tree.size){
+        main_clade1 = findCladeRecursive(main_clade1,mu,alpha)
+    }
 
 
-    #quick and dirty try for 2 groups
+    # IF the subtree 
     for(j in 1:2){
       #test for leaf:
       if(length(ground_dendro[[j]])<2)

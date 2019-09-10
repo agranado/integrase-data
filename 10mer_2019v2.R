@@ -53,6 +53,21 @@ files_to_process = files_to_process[files_to_process != grep("N/A",all.files$new
 # High level functions
 # Perform all analysis and call sub-functions
 
+
+
+
+
+
+
+# GLOBAL PARAMETERS
+params_global = estim.params.global(estimG = 4, fil = paste("../",integrase_folder,"10mer_2019/editRate/allBarcodes.txt",sep=""))
+mu = params_global[[1]]
+alpha = params_global[[2]]
+
+
+
+
+
 # USAGE : process.all.files(files_to_process) %>% reconstruct.all.lineages() -> memoirData
 
 
@@ -75,12 +90,12 @@ process.all.files <- function(files_to_process,remove_largeDels = F) {
 }
 
 # SECOND main function
-reconstruct.all.lineages <-function(dataTree,min.cells = 2,clust.method = "diana"){
+reconstruct.all.lineages <-function(dataTree,min.cells = 2,clust.method = "diana", recursive =F,second.clust.method = "ward.D2"){
   dataTree %>% dplyr::filter(nCells>min.cells) -> dataTree
 
 
   # dataTree is our first data sctructure
-  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree, clust.method = clust.method)
+  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree, clust.method = clust.method,recursive.reconstruction = recursive, second.clust.method = second.clust.method )
   aa = do.call(rbind,aa)
   aa <- as.data.frame(aa)
   names(aa) <- c("fileName","nCells","edit","dels","RF","ground","rec")
@@ -96,19 +111,6 @@ reconstruct.all.lineages <-function(dataTree,min.cells = 2,clust.method = "diana
 
 }
 # Global parameter for reconstructing ALL trees
-
-
-
-
-
-
-
-#
-params_global = estim.params.global(estimG = 4, fil = paste("../",integrase_folder,"10mer_2019/editRate/allBarcodes.txt",sep=""))
-mu = params_global[[1]]
-alpha = params_global[[2]]
-
-
 
 
 # Works OK Sep 4th
@@ -195,8 +197,7 @@ barcode.processing<-function(file.idx,remove_largeDels = F){
 # Output list of ground truth lineages: ready to be reconstructed
 # Can be used to get ALL ground_truth lineages like :
 # lapply(1:dim(dataTree)[1],reconstruct.lineages,dataTree=dataTree)
-reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method = "diana"){
-
+reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method = "diana",recursive.reconstruction = F,second.clust.method = "ward.D2"){
 
 
     print( paste( "processing", dataTree$fileName[file.idx] )  )
@@ -218,10 +219,19 @@ reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method = "di
 
     # This function takes the barcodes fromt he groun truth tree and reconstructs an independent lineage
     manualTree = reconstructLineage(ground_phylo,mu,alpha,return_tree = T,clust.method = clust.method)
-
+    #Calculation of different scoring metrics:
+    #
     RF_score = 1- RF.dist(manualTree,ground_phylo,normalize = T)
 
-    results_row = c(as.character(dataTree$fileName[file.idx]),toString(length(ground_phylo$tip.label)), toString(dataTree$edit[file.idx]), toString(dataTree$dels[file.idx]),  toString(RF_score) , write.tree(ground_phylo), write.tree(manualTree) )
+    # NEw method for DIANA + hclust
+    if(recursive.reconstruction)
+      RF_score = 1- RF.dist(recursiveReconstruction(manualTree,mu,alpha, second.clust.method),ground_phylo,normalize = T)
+
+
+
+    results_row = c(as.character(dataTree$fileName[file.idx]),toString(length(ground_phylo$tip.label)),
+                  toString(dataTree$edit[file.idx]), toString(dataTree$dels[file.idx]),  toString(RF_score) ,
+                      write.tree(ground_phylo), write.tree(manualTree) )
 
     return(results_row)
 
@@ -306,66 +316,97 @@ clusterDistMatrix<-function(matdist_,clust.method = "diana"){
 }
 
 
+
+
+
+
+
+
+# Sep 9th 2019
 # IDEA:
 # use DIANA to reconstruct the early lineage
 # cut the tree at 3 groups and then reconstruct each subgroup with hclust (which is best for sister and small groups)
 library(dendextend)
 
-recursiveReconstruction<-function(ground_phylo,mu,alpha, second.clust.method= "ward.D2"){
-  ngroups = 3
-  #get the DIANA tree first
-  diana_tree<-reconstructLineage(ground_phylo,mu,alpha,T,clust.method="diana")
-  diana_labels = cutree(diana_tree,k=ngroups) #returns cluster labels for each cell
-  # CONVERT  the whole tree to dendrogram class
-   ground_dendro = as.dendrogram.phylo(diana_tree)
+
+recursiveReconstruction<-function(ground_phylo,mu,alpha, second.clust.method= "ward.D2",min.tree.size = 9){
+
+  if(length(ground_phylo$tip.label)>min.tree.size){
+      ngroups = 3
+      #get the DIANA tree first
+      diana_tree<-reconstructLineage(ground_phylo,mu,alpha,T,clust.method="diana")
+
+      diana_labels = cutree(diana_tree,k=ngroups) #returns cluster labels for each cell
+      # CONVERT  the whole tree to dendrogram class
+      # ground_dendro = as.dendrogram.phylo(diana_tree)
 
 
-   # FOR 1:3   (assuming 3 main clades)
+       # FOR 1:3   (assuming 3 main clades)
+       # reconstruct the first partition of DIANA tree using hclust complete (or Ward D2)
+       # NOTE Only for the first patition:
+       recursive_phylo = findCladeRecursive(diana_tree, diana_labels,mu,alpha,second.clust.method )
 
 
+       # Then we have to find out, which is the other main partition
+       # We have the labels, so we might need to explore
 
+       ##xx$tip.label<-sample(xx$tip.label)
 
-   # Then we have to find out, which is the other main partition
-   # We have the labels, so we might need to explore
+       # NOTE: do something to xx (i.e. reconstruct)
 
-   ##xx$tip.label<-sample(xx$tip.label)
+       # convert back to phylogram and replace
+       ground_dendro[[1]]<-as.dendrogram.phylo(xx)
+      # x11();plot(ground_dendro)
 
-   # NOTE: do something to xx (i.e. reconstruct)
+       return(recursive_phylo)
 
-   # convert back to phylogram and replace
-   ground_dendro[[1]]<-as.dendrogram.phylo(xx)
-   x11();plot(ground_dendro)
-
-
-
+   }else{
+       #do nothing
+       return(ground_phylo)
+   }
 
 }
 
 
-findCladeRecursive<-function(ground_dendro,diana_labels){
+findCladeRecursive<-function(ground_phylo,diana_labels,mu,alpha,second.clust.method = "ward.D2"){
 
+    # This function will use the drndrogram object which can be easily accessed
+    ground_dendro = as.dendrogram.phylo(ground_phylo)
 
+    # This function will only reconstruct the first level of the DIANA tree
     # this structure comes as a list so we could take the principal branches directly
     # ground_dendro[[1]] and ground_dendro[[2]] are the two main clades (this is a binary tree)
     main_clade1 = as.phylo(ground_dendro[[1]])
     main_clade2 = as.phylo(ground_dendro[[2]])
 
 
-    index_clade = c()
-
-    for(i in 1:ngroups){
-      index_clade[i]= length(which(main_clade2$tip.label %in% names(diana_labels)[diana_labels==i] ))>0
-    }
+    # index_clade = c()
+    #
+    # for(i in 1:ngroups){
+    #   index_clade[i]= length(which(main_clade2$tip.label %in% names(diana_labels)[diana_labels==i] ))>0
+    # }
 
 
     #quick and dirty try for 2 groups
     for(j in 1:2){
+      #test for leaf:
+      if(length(ground_dendro[[j]])<2)
+        next # don't processs this branch since it is a leaf
+
       main_clade =   as.phylo(ground_dendro[[j]])
-      main_clade_clust  = reconstructLineage(main_clade, mu,alpha, return_tree = T, clust.method = "ward.D2")
+      #how many leaves on this clade:
+      # since we are going to re-reconstruct this clade, we need at least 3 leaves
+      if(length(main_clade$tip.label)>2){
+        main_clade_clust  = reconstructLineage(main_clade, mu,alpha, return_tree = T, clust.method = second.clust.method)
+      }else{
+        main_clade_clust = main_clade
+      }
 
       ground_dendro[[j]]<- as.dendrogram.phylo(main_clade_clust)
     }
-
+    #return phylo object
+    # as.Node converts the tree to Node object and somehow fixes weird branching left by the clade replacement
+    return(as.phylo(as.Node(ground_dendro)))
 
 }
 

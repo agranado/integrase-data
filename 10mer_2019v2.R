@@ -90,12 +90,12 @@ process.all.files <- function(files_to_process,remove_largeDels = F) {
 }
 
 # SECOND main function
-reconstruct.all.lineages <-function(dataTree,min.cells = 2,clust.method = "diana", recursive =F,second.clust.method = "ward.D2"){
+reconstruct.all.lineages <-function(dataTree,min.cells = 2,clust.method = "diana", recursive =F,second.clust.method = "ward.D2",min.recursive.tree =9){
   dataTree %>% dplyr::filter(nCells>min.cells) -> dataTree
 
 
   # dataTree is our first data sctructure
-  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree, clust.method = clust.method,recursive.reconstruction = recursive, second.clust.method = second.clust.method )
+  aa = lapply(1:dim(dataTree)[1], reconstruct.lineages,dataTree, clust.method = clust.method,recursive.reconstruction = recursive, second.clust.method = second.clust.method ,min.recursive.tree = min.recursive.tree)
   aa = do.call(rbind,aa)
   aa <- as.data.frame(aa)
   names(aa) <- c("fileName","nCells","edit","dels","RF","ground","rec")
@@ -197,7 +197,8 @@ barcode.processing<-function(file.idx,remove_largeDels = F){
 # Output list of ground truth lineages: ready to be reconstructed
 # Can be used to get ALL ground_truth lineages like :
 # lapply(1:dim(dataTree)[1],reconstruct.lineages,dataTree=dataTree)
-reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method_ = "diana",recursive.reconstruction = F,second.clust.method = "ward.D2"){
+reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method_ = "diana",recursive.reconstruction = F,
+                              second.clust.method = "ward.D2",min.recursive.tree = 9){
 
 
     print( paste( "processing", dataTree$fileName[file.idx] )  )
@@ -225,7 +226,7 @@ reconstruct.lineages <- function(file.idx,dataTree,control =F,clust.method_ = "d
 
     # NEw method for DIANA + hclust
     if(recursive.reconstruction){
-      manualTree = recursiveReconstruction(manualTree,mu = mu,alpha = alpha, second.clust.method)
+      manualTree = recursiveReconstruction(manualTree,mu = mu,alpha = alpha, second.clust.method,min.tree.size =min.recursive.tree)
       RF_score = 1- RF.dist( manualTree,ground_phylo,normalize = T)
     }
 
@@ -270,9 +271,9 @@ filter.cells.groundTruth<-function(barcodes,true.tree){
 
 # this function reconstructs a single lineage
 # It takes the barcode from the ground truth tree
-
-reconstructLineage<-function(ground_phylo,mu,alpha,return_tree = F,clust.method = "diana",nGen = 4){
-  cousin=T
+# Here we can use the cousin distance instead
+reconstructLineage<-function(ground_phylo,mu,alpha,return_tree = F,clust.method = "diana",nGen = 4,cousin=F){
+  cousin=F
   #get the barcode and cell id (cell id is not neccessarily continuous numbers)
   barcodes = str_split(ground_phylo$tip.label,"_",simplify=T)[,2]
   cell_ids = str_split(ground_phylo$tip.label,"_",simplify=T)[,1]
@@ -371,7 +372,7 @@ recursiveReconstruction<-function(ground_phylo ="",mu=c(),alpha=c(), second.clus
       #get the DIANA tree first
       diana_tree<-reconstructLineage(ground_phylo,mu,alpha,T,clust.method="diana")
 
-      diana_labels = cutree(diana_tree,k=ngroups) #returns cluster labels for each cell
+      #diana_labels = cutree(diana_tree,k=ngroups) #returns cluster labels for each cell
       # CONVERT  the whole tree to dendrogram class
       # ground_dendro = as.dendrogram.phylo(diana_tree)
 
@@ -379,7 +380,7 @@ recursiveReconstruction<-function(ground_phylo ="",mu=c(),alpha=c(), second.clus
        # FOR 1:3   (assuming 3 main clades)
        # reconstruct the first partition of DIANA tree using hclust complete (or Ward D2)
        # NOTE Only for the first patition:
-       recursive_phylo = findCladeRecursive(diana_tree,mu,alpha,second.clust.method)
+       recursive_phylo = findCladeRecursive(diana_tree,mu,alpha,second.clust.method, min.tree.size = min.tree.size)
 
 
        # Then we have to find out, which is the other main partition
@@ -402,7 +403,73 @@ recursiveReconstruction<-function(ground_phylo ="",mu=c(),alpha=c(), second.clus
 
 }
 
-#Works but still in proress
+# Best option so far (sep 13th) : v1 with two paritions
+# This function takes the main partition of the reconstructed dendrogram aka first cell division
+# It then re-clusters each clade using hierarchical clustering (as opposed to Divisive)
+
+# v1 Sep 15th 2019
+# Best option so far (sep 13th) : v1 with two paritions
+# This function takes the main partition of the reconstructed dendrogram aka first cell division
+# It then re-clusters each clade using hierarchical clustering (as opposed to Divisive)
+findCladeRecursive<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D2",min.tree.size = 9){
+
+    # This function will use the drndrogram object which can be easily accessed
+    ground_dendro = as.dendrogram.phylo(ground_phylo)
+
+    # This function will only reconstruct the first level of the DIANA tree
+    # this structure comes as a list so we could take the principal branches directly
+    # ground_dendro[[1]] and ground_dendro[[2]] are the two main clades (this is a binary tree)
+    main_clade1 = as.phylo(ground_dendro[[1]])
+    main_clade2 = as.phylo(ground_dendro[[2]])
+
+
+    #NOTE by default this function takes 2 partitions from the main tree i.e. the 1st cell division
+    # we can add 3 and 4 (probably more than that would not be ncessary right now)
+    # For 4 we just call [[1]] & [[2]] from each of the first 2 branches
+    # For 3 we need to use the branch lenght to identify which of the 2 branches splitted earliest and break the tree there
+
+    # IF the subtree
+    for(j in 1:2){
+      #test for leaf:
+      if(length(ground_dendro[[j]])<2)
+        next # don't processs this branch since it is a leaf
+
+      main_clade =   as.phylo(ground_dendro[[j]])
+      #how many leaves on this clade:
+      # since we are going to re-reconstruct this clade, we need at least 3 leaves
+      if(length(main_clade$tip.label)>2){
+        main_clade_clust  = reconstructLineage(main_clade, mu,alpha, return_tree = T, clust.method = second.clust.method)
+      }else{
+        main_clade_clust = main_clade
+      }
+
+      ground_dendro[[j]]<- as.dendrogram.phylo(main_clade_clust)
+    }
+
+
+
+
+    #return phylo object
+    # as.Node converts the tree to Node object and somehow fixes weird branching left by the clade replacement
+    return(as.phylo(as.Node(ground_dendro)))
+
+}
+
+
+
+
+
+
+
+
+
+# Alternative methods for recursive reconstruction
+# They work as expected but do not ourperform v1
+
+#NOTE Works fine, but is not as powerful as v1 (Sep 13th 2019)
+# Does recursive plotsReconstruction:
+# It will partition the tree until it finds a subtree of size >9 in which neither of the two main clased >9
+# It will then reconstruct this subtree using hclust
 findCladeRecursive_v2<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D2",min.tree.size = 9){
 
   if(length(ground_phylo$tip.label)>4){
@@ -487,7 +554,8 @@ findCladeRecursive_v2<-function(ground_phylo,mu,alpha,second.clust.method = "war
 
 
 
-findCladeRecursive<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D2",min.tree.size = 9){
+
+findCladeRecursive_v3<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D2",min.tree.size = 9,  partitions = 4){
 
     # This function will use the drndrogram object which can be easily accessed
     ground_dendro = as.dendrogram.phylo(ground_phylo)
@@ -498,11 +566,34 @@ findCladeRecursive<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D
     main_clade1 = as.phylo(ground_dendro[[1]])
     main_clade2 = as.phylo(ground_dendro[[2]])
 
-    # steps:
-    # 1. partition the tree
-    # 2. for each  branch, check that it is larger that 9 cells,
-    # 3. IF so then recursive
-    # 4. IF no then return as phylo
+
+    #NOTE by default this function takes 2 partitions from the main tree i.e. the 1st cell division
+    # we can add 3 and 4 (probably more than that would not be ncessary right now)
+    # For 4 we just call [[1]] & [[2]] from each of the first 2 branches
+    # For 3 we need to use the branch lenght to identify which of the 2 branches splitted earliest and break the tree there
+
+    main_clade1_height = attributes(ground_dendro[[1]])$height
+    main_clade2_height = attributes(ground_dendro[[2]])$height
+
+    #If we only want two partitions, we apply the function to the whole tree
+    if(partitions ==2){
+
+      ground_dendro= reconstructPartition(ground_dendro)
+    }else if(partitions==3){
+      # we do the whole tree, but then we re-reconstruct the heighest (earliest) clade again, such that we keep 3 groups
+      #The heighest branch tells us from the two main clades which one splitted earlier so we choose that
+      thirdbranch = which.max(c(main_clade1_height,main_clade2_height))
+
+      ground_dendro = reconstructPartition(ground_dendro)
+      # we reconstruct the earlier split
+      ground_dendro[[thirdbranch]] = reconstructPartition( ground_dendro[[thirdbranch]]  )
+
+    }else if(partitions == 4){
+        # here we just apply the function two the two main branches
+        ground_dendro[[1]] = reconstructPartition(ground_dendro[[1]])
+        ground_dendro[[2]] = reconstructPartition(ground_dendro[[2]])
+    }
+
 
     # if the subtree is larger than the minimum number of cells we do recursive function, until it returns
     # it will return if we reach a leave or if we reach a subtree with less thatn min.tree.size cells
@@ -516,6 +607,20 @@ findCladeRecursive<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D
     # }
 
 
+
+    #return phylo object
+    # as.Node converts the tree to Node object and somehow fixes weird branching left by the clade replacement
+    return(as.phylo(as.Node(ground_dendro)))
+
+}
+
+#this function takes a tree and reconstructs its two main clades using second.clust.method
+# its called by findCaldeRecursive and works in reconstrution using hybrid method DIANA + hclust
+
+reconstructPartition<-function(ground_dendro,second.clust.method = "ward.D2"){
+
+  # if this whole branch is a leaf
+  if(length(ground_dendro)>1){
     # IF the subtree
     for(j in 1:2){
       #test for leaf:
@@ -533,22 +638,6 @@ findCladeRecursive<-function(ground_phylo,mu,alpha,second.clust.method = "ward.D
 
       ground_dendro[[j]]<- as.dendrogram.phylo(main_clade_clust)
     }
-    #return phylo object
-    # as.Node converts the tree to Node object and somehow fixes weird branching left by the clade replacement
-    return(as.phylo(as.Node(ground_dendro)))
-
+  }
+  return(ground_dendro)
 }
-
-  #
-  # for(i in 1:ngroups){
-  #   subclade = extract.clade(diana_tree,MRCA(diana_tree,names(diana_labels[which(diana_labels==1)])))
-  #
-  #   # this command removes the tips we indicated and returns the rest of the tree
-  #   outgroup = dendextend::prune(ground_dendro,leaves =  names(diana_labels[which(diana_labels==1)]))
-  #
-  #   # reconstruct subclade
-  #
-  #     node.leaves(phylogeny, node)
-  # }
-
-#}
